@@ -23,8 +23,10 @@ endif( Boost_FOUND )
 
 ADD_EXECUTABLE(at at)
 ADD_EXECUTABLE(at-cremers at-cremers)
+ADD_EXECUTABLE(at-TM-0p-1p at-TM-0p-1p)
 
 # TARGET_LINK_LIBRARIES(grayball ${DGTAL_LIBRARIES})
 target_link_libraries (at ${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
 target_link_libraries (at-cremers ${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
+target_link_libraries (at-TM-0p-1p ${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
 

@@ -1,0 +1,255 @@
+#include <sstream>
+#include <string>
+
+// always include EigenSupport.h before any other Eigen headers
+#include "DGtal/math/linalg/EigenDecomposition.h"
+
+#include "DGtal/dec/DiscreteExteriorCalculus.h"
+#include "DGtal/dec/DiscreteExteriorCalculusSolver.h"
+
+#include "DGtal/base/Common.h"
+#include "DGtal/helpers/StdDefs.h"
+#include "DGtal/images/ImageSelector.h"
+
+// RealFFT
+#include "DGtal/kernel/domains/HyperRectDomain.h"
+#include "DGtal/kernel/SpaceND.h"
+#include "DGtal/images/ImageContainerBySTLVector.h"
+#include "RealFFT.h" 
+#include "VTKWriter.h"
+
+
+
+#include "structureTensor.h"
+
+
+
+
+  
+/** Compute the structure tensor.
+	* @param 	im 		The image over which the structure tensor will be computed;
+	*					T			The structure tensor;
+	*					sizeT	= image size;
+	*					s 		The first convolution parameter (default_value=3.0);
+	*					r 		The second convolution parameter (default_value=2.0).
+	*/
+	
+template <typename ImageMatrix, typename ImageDouble>
+void structureTensor( ImageMatrix& T, const ImageDouble& imDouble,
+		  double const& s, double const& r)
+{	 
+  using namespace std;
+  using namespace DGtal;
+  
+  constexpr typename DGtal::Dimension N = 2;
+  //using real = double;
+  //using integer = int;
+  using Space = DGtal::SpaceND<N, int>;
+  using Point = typename Space::Point;
+  typedef typename ImageDouble::Domain Domain;
+  using FFT = DGtal::RealFFT<Domain, double>;
+  
+  // ImageDouble imDouble = GenericReader<ImageDouble>::import( im );
+  Domain imDomain = imDouble.domain();
+  
+  
+  /* FIRST CONVOLUTION */
+	
+  ImageDouble imageIx = imDouble;
+  ImageDouble imageIy = imDouble;
+  FFT Ix(imDomain);
+  FFT Iy(imDomain);
+  
+  // Copy data
+  auto spatial_imageIx = Ix.getSpatialImage();
+  auto spatial_imageIy = Iy.getSpatialImage();
+  std::copy( imageIx.cbegin(), imageIx.cend(), spatial_imageIx.begin() );
+  std::copy( imageIy.cbegin(), imageIy.cend(), spatial_imageIy.begin() );
+
+  // Forward transformation
+  Ix.forwardFFT(FFTW_ESTIMATE);
+  Iy.forwardFFT(FFTW_ESTIMATE);
+  
+	// Convolution
+  auto const spatDomExtent = Ix.getSpatialExtent(); // dimension of the spatial domain (L*L)
+  auto freq_imageIx = Ix.getFreqImage();
+  auto freq_imageIy = Iy.getFreqImage();
+  for ( auto itX = freq_imageIx.begin(), itY = freq_imageIy.begin(); itX != freq_imageIx.end(); ++itX, ++itY )
+    {
+      auto const& point = itX.getPoint(); // point = (x,y)
+      
+      double norm2 = 0;
+      double xi[N];
+      for ( size_t j = 0; j < N; ++j)
+        {
+          double coord = static_cast<double>(point[j]) / spatDomExtent[j];	// x,y in [O,L]*[O,L] -> xi1, xi2 in [0,1]*[0,1]
+          if ( coord >= 0.5 ) coord -= 1.;
+          norm2 += coord*coord;
+          xi[j] = coord;
+        }
+        
+      const double TF_Gs = s * std::exp( -2.0*M_PI*M_PI*s*s*norm2 ); // s est defini en spatial, en fréquentiel s' = 1/s. De plus en freq on est dans [0,1]*[0,1] et non [0,2pi]*[0,2pi], donc s_freq = s'/2pi = 1/(2pi*s)
+			//const double TF_Gs = s / (2.0*M_PI) * std::exp( -s*s*norm2/2.0 ); // s est defini en spatial et non est frequentieln est frequentiel
+			
+			
+      // New value
+      auto const vX = *itX;
+      auto const vY = *itY;
+      *itX = { - xi[0]*TF_Gs*std::imag(vX), xi[0]*TF_Gs*std::real(vX) };
+      *itY = { - xi[1]*TF_Gs*std::imag(vY), xi[1]*TF_Gs*std::real(vY) };
+    }
+  
+  // Back in spatial space
+  Ix.backwardFFT(FFTW_ESTIMATE);
+  Iy.backwardFFT(FFTW_ESTIMATE);
+
+  // Store the result
+  const size_t spatDomSize = Ix.getSpatialDomain().size();
+  std::transform(
+      spatial_imageIx.cbegin(),
+      spatial_imageIx.cend(),
+      imageIx.begin(),
+      [spatDomSize] (double x) { return x/spatDomSize; }
+  );
+  std::transform(
+      spatial_imageIy.cbegin(),
+      spatial_imageIy.cend(),
+      imageIy.begin(),
+      [spatDomSize] (double x) { return x/spatDomSize; }
+  );
+     
+//  // Export
+//  if ( N == 2 )
+//    {
+//      DGtal::VTKWriter<Domain>( "conv_Ix", imageIx.domain() ) << "data" << imageIx;
+//      DGtal::VTKWriter<Domain>( "conv_Iy", imageIy.domain() ) << "data" << imageIy;
+//    }
+    
+ 
+  /* SECOND CONVOLUTION */
+  
+  FFT Ix2(imDomain);
+  FFT IxIy(imDomain);
+  FFT Iy2(imDomain);
+  auto spatial_imageIx2 = Ix2.getSpatialImage();
+  auto spatial_imageIxIy = IxIy.getSpatialImage();
+  auto spatial_imageIy2 = Iy2.getSpatialImage();
+
+  std::transform(
+      imageIx.cbegin(),
+      imageIx.cend(),
+      spatial_imageIx2.begin(),
+      [] (double x) { return x*x; }
+  );
+  std::transform(
+      imageIy.cbegin(),
+      imageIy.cend(),
+      spatial_imageIy2.begin(),
+      [] (double x) { return x*x; }
+  );
+  std::transform(
+      imageIx.cbegin(),
+      imageIx.cend(),
+      imageIy.cbegin(),
+      spatial_imageIxIy.begin(),
+      [] (double x, double y) { return x*y; }
+  );
+
+//	for (int k = 0 ; k < Ix2.getSpatialDomain().size(); ++k)
+//	{
+//		Ix2.getSpatialStorage()[k] = Ix.getSpatialStorage()[k] * Ix.getSpatialStorage()[k];
+//		IxIy.getSpatialStorage()[k] = Ix.getSpatialStorage()[k] * Iy.getSpatialStorage()[k];
+//		Iy2.getSpatialStorage()[k] = Iy.getSpatialStorage()[k] * Iy.getSpatialStorage()[k];
+//	}
+	
+//  // Copy data
+//  auto spatial_imageIx2 = Ix2.getSpatialImage();
+//  auto spatial_imageIxIy = IxIy.getSpatialImage();
+//  auto spatial_imageIy2 = Iy2.getSpatialImage();
+//  
+//  std::copy( imageIx.cbegin(), spatial_imageIx.cend(), spatial_imageIx2.begin() );
+//  std::copy( imageIxIy.cbegin(), imageIxIy.cend(), spatial_imageIxIy.begin() );
+//  std::copy( imageIy2.cbegin(), imageIy2.cend(), spatial_imageIy2.begin() );
+
+  // Forward transformation
+  Ix2.forwardFFT(FFTW_ESTIMATE);
+  IxIy.forwardFFT(FFTW_ESTIMATE);
+  Iy2.forwardFFT(FFTW_ESTIMATE);
+  
+	// Convolution
+  auto freq_imageIx2 = Ix2.getFreqImage();
+  auto freq_imageIxIy = IxIy.getFreqImage();
+  auto freq_imageIy2 = Iy2.getFreqImage();
+  for ( auto itX2 = freq_imageIx2.begin(), itXY = freq_imageIxIy.begin(), itY2 = freq_imageIy2.begin(); itX2 != freq_imageIx2.end(); ++itX2, ++itXY, ++itY2 )
+    {
+      auto const& point = itX2.getPoint(); // point = (x,y) in the spatial domain
+      
+      double norm2 = 0;
+      double xi[N];
+      for ( size_t j = 0; j < N; ++j)
+        {
+          double coord = static_cast<double>(point[j]) / spatDomExtent[j];	// x,y in the spatial domain [O,L]*[O,L] -> xi1, xi2 in the frequential domain [0,1]*[0,1]
+          if ( coord >= 0.5 ) coord -= 1.;
+          norm2 += coord*coord;
+          xi[j] = coord;
+        }
+
+      const double TF_Gr = r * std::exp( -2.0*M_PI*M_PI*r*r*norm2 );
+
+      // New value
+      auto const vX2 = *itX2;
+      auto const vXY = *itXY;
+      auto const vY2 = *itY2;
+      *itX2 = { TF_Gr*std::real(vX2), TF_Gr*std::imag(vX2) };
+      *itXY = { TF_Gr*std::real(vXY), TF_Gr*std::imag(vXY) };
+      *itY2 = { TF_Gr*std::real(vY2), TF_Gr*std::imag(vY2) };
+    }
+   
+  // Back in spatial space
+  Ix2.backwardFFT(FFTW_ESTIMATE);
+  IxIy.backwardFFT(FFTW_ESTIMATE);
+  Iy2.backwardFFT(FFTW_ESTIMATE);
+
+  // Store the result
+  ImageDouble imageIx2 = imDouble;
+  ImageDouble imageIxIy = imDouble;
+  ImageDouble imageIy2 = imDouble;
+  
+  std::transform(
+      spatial_imageIx2.cbegin(),
+      spatial_imageIx2.cend(),
+      imageIx2.begin(),
+      [spatDomSize] (double x) { return x/spatDomSize; }
+  );
+  std::transform(
+      spatial_imageIxIy.cbegin(),
+      spatial_imageIxIy.cend(),
+      imageIxIy.begin(),
+      [spatDomSize] (double x) { return x/spatDomSize; }
+  );
+  std::transform(
+      spatial_imageIy2.cbegin(),
+      spatial_imageIy2.cend(),
+      imageIy2.begin(),
+      [spatDomSize] (double x) { return x/spatDomSize; }
+  );
+  
+//  // Export
+//  if ( N == 2 )
+//    {
+//      DGtal::VTKWriter<Domain>( "conv_Ix2", imageIx2.domain() ) 	<< "data" << imageIx2;
+//      DGtal::VTKWriter<Domain>( "conv_IxIy", imageIxIy.domain() ) << "data" << imageIxIy;
+//      DGtal::VTKWriter<Domain>( "conv_Iy2", imageIy2.domain() ) 	<< "data" << imageIy2;
+//    }
+    
+  auto itT = T.begin();
+  for ( auto itX2 = imageIx2.begin(), itXY = imageIxIy.begin(), itY2 = imageIy2.begin() ; itX2 != imageIx2.end(); ++itX2, ++itXY, ++itY2, ++itT )
+  {
+  	(*itT).setComponent(0,0,*itX2);
+  	(*itT).setComponent(0,1,*itXY);
+  	(*itT).setComponent(1,0,*itXY);
+  	(*itT).setComponent(1,1,*itY2);
+	}
+}
+ 
+ 
