@@ -411,9 +411,12 @@ int main( int argc, char* argv[] )
 
   SolverV solver_lap_operator_v;
   /** A CORRIGER : pb avec le nouv lap  tB.inv(G2).B + inv(G1).A.G0.tA inv(G1) */
-      const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
-                                                           + dual_D0 * primal_h2 * invG2 * primal_D1 );
-
+  // BEG JOL
+  // const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
+  //                                                           + dual_D0 * primal_h2 * invG2 * primal_D1 );
+  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
+                                                            + G1 * dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
+  // END JOL
 
   // ancien lap
   //const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
