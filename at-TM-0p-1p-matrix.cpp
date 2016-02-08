@@ -143,6 +143,39 @@ typename Calculus::PrimalIdentity1 square( const Calculus& calculus,
   return tB_B;
 }
 
+template <typename Calculus>
+double innerProduct( const Calculus& calculus,
+                     const typename Calculus::PrimalForm0& u,
+                     const typename Calculus::PrimalForm0& v )
+{
+  double val = 0.0;
+  for ( typename Calculus::Index index = 0; index < u.myContainer.rows(); index++ )
+    val += u.myContainer( index ) * v.myContainer( index );
+  return val;
+}
+
+template <typename Calculus>
+double innerProduct( const Calculus& calculus,
+                     const typename Calculus::PrimalForm1& u,
+                     const typename Calculus::PrimalForm1& v )
+{
+  double val = 0.0;
+  for ( typename Calculus::Index index = 0; index < u.myContainer.rows(); index++ )
+    val += u.myContainer( index ) * v.myContainer( index );
+  return val;
+}
+
+template <typename Calculus>
+double innerProduct( const Calculus& calculus,
+                     const typename Calculus::PrimalForm2& u,
+                     const typename Calculus::PrimalForm2& v )
+{
+  double val = 0.0;
+  for ( typename Calculus::Index index = 0; index < u.myContainer.rows(); index++ )
+    val += u.myContainer( index ) * v.myContainer( index );
+  return val;
+}
+
 namespace DGtal {
   template <typename TComponent, DGtal::Dimension TM, DGtal::Dimension TN>
   bool
@@ -441,8 +474,8 @@ int main( int argc, char* argv[] )
                   trace.info() << "-------------------------------------------------------------------------------" << endl;
                   trace.endBlock();
 
-                  // trace.beginBlock("Solving for v");
-                  // trace.info() << "Building matrix BB+Mw2" << endl;
+                  trace.beginBlock("Solving for v");
+                  trace.info() << "Building matrix BB+Mw2" << endl;
                   const Calculus::PrimalForm1 former_v = v;
                   const Calculus::PrimalIdentity1 A_u = diag( calculus, primal_D0 * u );
                   const Calculus::PrimalIdentity1 tu_tA_A_u = square( calculus, A_u );
@@ -460,9 +493,10 @@ int main( int argc, char* argv[] )
                   // solver_v.compute( BB + tutAtSSAu * tS_S );
                   // trace.info() << 	"Solving (BB+Mw2)v = l_4e" << endl;
                   // v = solver_v.solve( (1.0/eps) * tS_S * l_sur_4 );
-                  // trace.info() << ( solver_v.isValid() ? "OK" : "ERROR" ) << " " << solver_v.myLinearAlgebraSolver.info() << endl;
-                  // trace.endBlock();
+                  trace.info() << ( solver_v.isValid() ? "OK" : "ERROR" ) << " " << solver_v.myLinearAlgebraSolver.info() << endl;
+                  trace.endBlock();
 
+                  trace.beginBlock("Checking v, computing norms");
                   double m1 = 1.0;
                   double m2 = 0.0;
                   double ma = 0.0;
@@ -479,41 +513,42 @@ int main( int argc, char* argv[] )
                     v.myContainer( index ) = std::min( std::max(v.myContainer( index ), 0.0) , 1.0 );
                   
                   double n_infty = 0.0;
+                  double n_2 = 0.0;
+                  double n_1 = 0.0;
+                  
                   for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                    n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
+                    {
+                      n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
+                      n_2    += ( v.myContainer( index ) - former_v.myContainer( index ) )
+                                * ( v.myContainer( index ) - former_v.myContainer( index ) );
+                      n_1    += abs( v.myContainer( index ) - former_v.myContainer( index ) );
+                    }
+                  n_1 /= v.myContainer.rows();
+                  n_2 = sqrt( n_2 / v.myContainer.rows() );
+                  
                   trace.info() << "Variation |v^k+1 - v^k|_oo = " << n_infty << endl;
+                  trace.info() << "Variation |v^k+1 - v^k|_2 = " << n_2 << endl;
+                  trace.info() << "Variation |v^k+1 - v^k|_1 = " << n_1 << endl;
                   if ( n_infty < 1e-4 ) break;
+                  trace.endBlock();
                 }
             }
         }
 
-/** A REPRENDRE */
-//      // affichage des energies ***********************************************************************************
+      // affichage des energies ********************************************************************
 
-//      typedef Calculus::SparseMatrix SparseMatrix;
-//      typedef Eigen::Matrix<double,Dynamic,Dynamic> Matrix;
+      trace.beginBlock("Computing energies");
 
-//      trace.beginBlock("Computing energies");
+      // a(u-g)^2
+      const Calculus::PrimalForm0 u_minus_g = u - g;
+      double alpha_square_u_minus_g = a * innerProduct( calculus, u_minus_g, u_minus_g );
+      trace.info() << "- a(u-g)^2      = " << alpha_square_u_minus_g << std::endl;
+      // v^2|grad u|^2
 
-//      // a(u-g)^2
-//      trace.info() << "- a(u-g)^2 " << std::endl;
-//      double UmG2 = 0.0;
-//      for ( Calculus::Index index = 0; index < u.myContainer.rows(); index++)
-//        UmG2 += (a*h*h) * (u.myContainer( index ) - g.myContainer( index )) * (u.myContainer( index ) - g.myContainer( index ));
-
-//      // v^2|grad u|^2
-//      trace.info() << "- v^2|grad u|^2" << std::endl;
-//      double V2gradU2 = 0.0;
-//      SolverU solver_Av2A;
-//      trace.info() << "  - Id" << std::endl;
-//      Calculus::PrimalIdentity1 Mv2 = calculus.identity<1, PRIMAL>();
-//      trace.info() << "  - M := Diag(v^2)" << std::endl;
-//      for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-//        Mv2.myContainer.coeffRef( index, index ) = v.myContainer[ index ] * v.myContainer[ index ];
-//      trace.info() << "  - * D_1 * M * D_0" << std::endl;
-//      const Calculus::PrimalIdentity0 Av2A = - (1.0/h) * dual_h2 * dual_D1 * primal_h1 * Mv2 * invG1 * primal_D0;
-//      trace.info() << "  - N := compute (* D_1 * M * D_0)" << std::endl;
-//      solver_Av2A.compute( Av2A );
+      const Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
+      const Calculus::PrimalForm1 v_A_u = diag_v * primal_D0 * u;
+      double square_v_grad_u = innerProduct( calculus, v_A_u, v_A_u );
+      trace.info() << "- v^2|grad u|^2 = " << square_v_grad_u << std::endl;
 //      // JOL: 1000 * plus rapide !
 //      trace.info() << "  - u^t N u" << std::endl;
 //      Calculus::PrimalForm0 u_prime = Av2A * u;
@@ -524,24 +559,23 @@ int main( int argc, char* argv[] )
 //      //     V2gradU2 += u.myContainer( index_i ) * Av2A.myContainer.coeff( index_i,index_j ) * u.myContainer( index_j ) ;
 
 //      // le|grad v|^2
-//      trace.info() << "- le|grad v|^2" << std::endl;
-//      Calculus::PrimalForm1 v_prime = lap_operator_v * v;
-//      double gradV2 = 0.0;
-//      for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-//        gradV2 += (l * eps / h) * v.myContainer( index ) * v_prime.myContainer( index );
-//      // for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
-//      //   for ( Calculus::Index index_j = 0; index_j < v.myContainer.rows(); index_j++)
-//      //     gradV2 += l * eps * v.myContainer( index_i ) * lap_operator_v.myContainer.coeff( index_i,index_j ) * v.myContainer( index_j );
+      Calculus::PrimalForm1 v_prime = lap_operator_v * v;
+      double le_square_grad_v = l * eps * innerProduct( calculus, v, v_prime );
+      trace.info() << "- le|grad v|^2  = " << le_square_grad_v << std::endl;
 
-//      // l(1-v)^2/4e
-//      trace.info() << "- l(1-v)^2/4e" << std::endl;
-//      double Vm12 = 0.0;
-//      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
-//        Vm12 += (l*h/(4*eps)) * (1 - 2*v.myContainer( index_i ) + v.myContainer( index_i )*v.myContainer( index_i ));
+      // l(1-v)^2/4e
+      Calculus::PrimalForm1 one_minus_v = v;
+      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
+        one_minus_v.myContainer( index_i ) = 1.0 - one_minus_v.myContainer( index_i );
+      double l_over_4e_square_1_minus_v
+        = l / (4*eps) * innerProduct( calculus, one_minus_v, one_minus_v ); 
+      trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
+      // l.per
+      double Lper = le_square_grad_v + l_over_4e_square_1_minus_v;
+      trace.info() << "- l.per         = " << Lper << std::endl;
+      // AT tot
+      double ATtot = alpha_square_u_minus_g + square_v_grad_u + Lper;
 
-//      // l.per
-//      trace.info() << "- l.per" << std::endl;
-//      double Lper = gradV2 + Vm12;
 //      //      double per = 0.0;
 //      //      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
 //      //      {
@@ -550,13 +584,17 @@ int main( int argc, char* argv[] )
 //      //            per += e * v.myContainer( index_i ) * tBB.myContainer( index_i,index_j ) * v.myContainer( index_j );
 //      //      }
 
-//      // AT tot
-//      double ATtot = UmG2 + V2gradU2 + gradV2 + Vm12;
 
-//      //f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;
-//      f << tronc(l,8) << "\t" << a << "\t"  << tronc(eps,4) << "\t"  << tronc(UmG2,5) << "\t"  << tronc(V2gradU2,5) << "\t"  << tronc(gradV2,5) << "\t" << tronc(Vm12,5) << "\t" << tronc(Lper,5)  << "\t" << tronc(ATtot,5) << endl;
+      // f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;
+      f << tronc(l,8) << "\t" << a << "\t"  << tronc(eps,4)
+        << "\t" << tronc(alpha_square_u_minus_g,5)
+        << "\t" << tronc(square_v_grad_u,5)
+        << "\t" << tronc(le_square_grad_v,5)
+        << "\t" << tronc(l_over_4e_square_1_minus_v,5)
+        << "\t" << tronc(Lper,5)
+        << "\t" << tronc(ATtot,5) << endl;
 
-//      trace.endBlock();
+      trace.endBlock();
 
       // ***********************************************************************************************************************
 
