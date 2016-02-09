@@ -386,15 +386,20 @@ int main( int argc, char* argv[] )
   // Calculus::PrimalIdentity1 tSy_Sy = G1;
   // tSy_Sy.myContainer = (tSy * Sy); // (1.0/(h*h))*(tSx * Sx + tSy * Sy);
   
-  // const Matrix& M = tS_S.myContainer;
-  // for (int k = 0; k < M.outerSize(); ++k)
-  //   for ( Matrix::InnerIterator it( M, k ); it; ++it )
-  //     trace.info() << "[" << it.row() << "," << it.col() << "] = " << it.value() << endl;
-
   // Building tA_tS_S_A
   Calculus::PrimalIdentity0 tA_tS_S_A = G0;
   tA_tS_S_A.myContainer = tA * tS_S.myContainer * A;
 
+  // Builds a Laplacian but at distance 2 !
+  // const Matrix& M = tA_tS_S_A.myContainer;
+  // for (int k = 0; k < M.outerSize(); ++k)
+  //   {
+  //     trace.info() << "-----------------------------------------------------------------------" << endl;
+  //     for ( Matrix::InnerIterator it( M, k ); it; ++it )
+  //       trace.info() << "[" << it.row() << "," << it.col() << "] = " << it.value() << endl;
+  //   }
+
+  
   // Building iG1_A_G0_tA_iG1 + tB_iG2_B
   const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
                                                             + dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
@@ -418,18 +423,18 @@ int main( int argc, char* argv[] )
       Calculus::PrimalForm1 l_sur_4( calculus );
       for ( Calculus::Index index = 0; index < l_sur_4.myContainer.rows(); index++)
         l_sur_4.myContainer( index ) = l/4.0;
-
+      l_sur_4 = tS_S * l_sur_4;
       double coef_eps = 2.0;
       double eps = coef_eps*e;
       
       for( int k = 0 ; k < 5 ; ++k )
         {
-          if (eps/coef_eps < 2.0*h)
+          if (eps/coef_eps < 2*h)
             break;
           else
             {
               eps /= coef_eps;
-              Calculus::PrimalIdentity1 BB = eps * lBB + ( l/(4.0*eps) ) * Id1; // tS_S;
+              Calculus::PrimalIdentity1 BB = eps * lBB + ( l/(4.0*eps) ) * tS_S; // Id1; // tS_S;
               int i = 0;
               for ( ; i < n; ++i )
                 {
@@ -440,27 +445,11 @@ int main( int argc, char* argv[] )
                   double tvtSSv = 0.0;
                   Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
                   Calculus::PrimalDerivative0 v_A = diag_v * primal_D0;
-                  // Same result as below.
-                  // Calculus::PrimalDerivative0 tSx_Sx_v_A = tSx_Sx * v_A;
-                  // Calculus::PrimalDerivative0 tSy_Sy_v_A = tSy_Sy * v_A;
-                  // Calculus::PrimalIdentity0 Av2A = calculus.identity<0, PRIMAL>();
-                  // Av2A.myContainer = v_A.myContainer.transpose() * tSx_Sx_v_A.myContainer
-                  //   + v_A.myContainer.transpose() * tSy_Sy_v_A.myContainer
-                  //   + alpha_iG0.myContainer;
-                  // Strangely tA_tv_v_A is nicer than tA_tv_tS_S_v_A
                   // Calculus::PrimalDerivative0 tS_S_v_A = tS_S * v_A;
-                  Calculus::PrimalIdentity0 Av2A = square( calculus, v_A ) + alpha_iG0;
                   // Calculus::PrimalIdentity0 Av2A = calculus.identity<0, PRIMAL>();
-                  // Av2A.myContainer = 1.0 * v_A.myContainer.transpose() * v_A.myContainer
+                  // Av2A.myContainer = v_A.myContainer.transpose() * tS_S_v_A.myContainer
                   //   + alpha_iG0.myContainer;
-
-                  //Av2A += alpha_iG0;
-                  // double tvtSSv = 0.0;
-                  // Calculus::PrimalForm1 tS_S_v = tS_S * v;
-                  // for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                  //   tvtSSv += v.myContainer( index ) * tS_S_v.myContainer( index );
-                  // const Calculus::PrimalIdentity0 Av2A = ( ( 1.0 * tvtSSv ) * tA_tS_S_A ) + alpha_iG0;
-                  // trace.info() << "tvtSSv = " << tvtSSv << endl;
+                  Calculus::PrimalIdentity0 Av2A = square( calculus, v_A ) + alpha_iG0;
                   trace.info() << "Prefactoring matrix Av2A := tv_tS_S_v.tA_tS_S_A + alpha_iG0" << endl;
                   trace.info() << "-------------------------------------------------------------------------------" << endl;
                   // const Matrix& M = Av2A.myContainer;
@@ -474,25 +463,13 @@ int main( int argc, char* argv[] )
                   trace.info() << "-------------------------------------------------------------------------------" << endl;
                   trace.endBlock();
 
+                  const Calculus::PrimalForm1 former_v = v;
                   trace.beginBlock("Solving for v");
                   trace.info() << "Building matrix BB+Mw2" << endl;
-                  const Calculus::PrimalForm1 former_v = v;
                   const Calculus::PrimalIdentity1 A_u = diag( calculus, primal_D0 * u );
                   const Calculus::PrimalIdentity1 tu_tA_A_u = square( calculus, A_u );
                   solver_v.compute( tu_tA_A_u + BB );
                   v = solver_v.solve( (1.0/eps) * l_sur_4 );
-                  // v = solver_v.solve( (1.0/eps) * tS_S * l_sur_4 );
-                  
-                  // double tutAtSSAu = 0.0;
-                  // Calculus::PrimalForm0 tA_tS_S_A_u = tA_tS_S_A * u;
-                  // for ( Calculus::Index index = 0; index < u.myContainer.rows(); index++)
-                  //   tutAtSSAu += u.myContainer( index ) * tA_tS_S_A_u.myContainer( index );
-
-                  // trace.info() << "Prefactoring matrix BB+Mw2" << endl;
-                  // trace.info() << "tutAtSSAu = " << tutAtSSAu << endl;
-                  // solver_v.compute( BB + tutAtSSAu * tS_S );
-                  // trace.info() << 	"Solving (BB+Mw2)v = l_4e" << endl;
-                  // v = solver_v.solve( (1.0/eps) * tS_S * l_sur_4 );
                   trace.info() << ( solver_v.isValid() ? "OK" : "ERROR" ) << " " << solver_v.myLinearAlgebraSolver.info() << endl;
                   trace.endBlock();
 
@@ -529,8 +506,8 @@ int main( int argc, char* argv[] )
                   trace.info() << "Variation |v^k+1 - v^k|_oo = " << n_infty << endl;
                   trace.info() << "Variation |v^k+1 - v^k|_2 = " << n_2 << endl;
                   trace.info() << "Variation |v^k+1 - v^k|_1 = " << n_1 << endl;
-                  if ( n_infty < 1e-4 ) break;
                   trace.endBlock();
+                  if ( n_infty < 1e-4 ) break;
                 }
             }
         }
