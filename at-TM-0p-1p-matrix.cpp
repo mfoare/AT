@@ -367,7 +367,7 @@ int main( int argc, char* argv[] )
   const Matrix& A = primal_D0.myContainer;
   const Matrix tA = A.transpose();
   Calculus::PrimalIdentity1 tA_A = G1;
-  G1.myContainer = tA * A;
+  tA_A.myContainer = tA * A;
 
   // Building tS_S
   Calculus::PrimalAntiderivative1   sharp_x   = calculus.sharpDirectional<PRIMAL>(dimX);
@@ -423,7 +423,7 @@ int main( int argc, char* argv[] )
       Calculus::PrimalForm1 l_sur_4( calculus );
       for ( Calculus::Index index = 0; index < l_sur_4.myContainer.rows(); index++)
         l_sur_4.myContainer( index ) = l/4.0;
-      l_sur_4 = tS_S * l_sur_4;
+      l_sur_4 = Id1 * l_sur_4; // tS_S * l_sur_4;
       double coef_eps = 2.0;
       double eps = coef_eps*e;
       
@@ -434,7 +434,7 @@ int main( int argc, char* argv[] )
           else
             {
               eps /= coef_eps;
-              Calculus::PrimalIdentity1 BB = eps * lBB + ( l/(4.0*eps) ) * tS_S; // Id1; // tS_S;
+              Calculus::PrimalIdentity1 BB = eps * lBB + ( l/(4.0*eps) ) * Id1; // tS_S;
               int i = 0;
               for ( ; i < n; ++i )
                 {
