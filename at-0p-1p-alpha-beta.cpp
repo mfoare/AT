@@ -32,6 +32,7 @@
 #include "structureTensor.h"
 
 
+
 using namespace std;
 using namespace DGtal;
 using namespace Eigen;
