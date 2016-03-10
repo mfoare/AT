@@ -27,10 +27,12 @@ ADD_EXECUTABLE(at at)
 ADD_EXECUTABLE(at-cremers at-cremers)
 ADD_EXECUTABLE(at-TM-0p-0p-matrix at-TM-0p-0p-matrix)
 ADD_EXECUTABLE(at-TM-0p-1p-matrix at-TM-0p-1p-matrix)
+ADD_EXECUTABLE(3d-at-normals 3d-at-normals)
 
 # TARGET_LINK_LIBRARIES(grayball ${DGTAL_LIBRARIES})
 target_link_libraries (at ${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
 target_link_libraries (at-cremers ${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
 target_link_libraries (at-TM-0p-0p-matrix ${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
 target_link_libraries (at-TM-0p-1p-matrix ${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
+target_link_libraries (3d-at-normals ${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
 
