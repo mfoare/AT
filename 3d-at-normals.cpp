@@ -612,10 +612,10 @@ int main( int argc, char** argv )
           double n_1 = 0.0;
           for ( Index index = 0; index < nb1; index++)
             {
-              n_infty = std::max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
+              n_infty = std::max( n_infty, fabs( v.myContainer( index ) - former_v.myContainer( index ) ) );
               n_2    += ( v.myContainer( index ) - former_v.myContainer( index ) )
                 * ( v.myContainer( index ) - former_v.myContainer( index ) );
-              n_1    += abs( v.myContainer( index ) - former_v.myContainer( index ) );
+              n_1    += fabs( v.myContainer( index ) - former_v.myContainer( index ) );
             }
           n_1 /= v.myContainer.rows();
           n_2 = sqrt( n_2 / v.myContainer.rows() );
