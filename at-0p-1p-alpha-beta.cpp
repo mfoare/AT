@@ -32,7 +32,6 @@
 #include "structureTensor.h"
 
 
-
 using namespace std;
 using namespace DGtal;
 using namespace Eigen;
@@ -88,6 +87,28 @@ void PrimalForm1ToImage( const Calculus& calculus, const typename Calculus::Prim
       g = std::max( 0 , std::min( 255, g ) );
       image.setValue( calculus.myKSpace.sKCoords( cell ), g );
     }
+}
+
+template <typename Calculus, typename Image>
+void savePrimalForm0ToImage( const Calculus& calculus, const Image& image, const typename Calculus::PrimalForm0& u, const string& filename )
+{
+    Image end_image = image;
+    PrimalForm0ToImage( calculus, u, end_image );
+    ostringstream ossU;
+    ossU << filename;
+    string str_image_u = ossU.str();
+    end_image >> str_image_u.c_str();
+}
+
+template <typename Calculus, typename Image>
+void savePrimalForm1ToImage( const Calculus& calculus, const Image& image, const typename Calculus::PrimalForm1& v, const string& filename )
+{
+    Image end_image = image;
+    PrimalForm1ToImage( calculus,v, end_image );
+    ostringstream ossV;
+    ossV << filename;
+    string str_image_v = ossV.str();
+    end_image >> str_image_v.c_str();
 }
 
 double tronc( const double& nb, const int& p )
@@ -176,6 +197,77 @@ double innerProduct( const Calculus& calculus,
   return val;
 }
 
+template <typename Calculus, typename ImageDouble>
+double interpolation(const Calculus& calculus, const ImageDouble& I, int const& i, int const& j, double const& x, double const& y)
+//double interpolation(const ImageDouble& I, typename Calculus::SCell const& cell, RealVector const& n)
+{
+
+    typedef typename Calculus::KSpace KSpace;
+    typedef typename KSpace::Point Point;
+
+    const KSpace& K = calculus.myKSpace;
+    const int n  = K.size(0); // = w-1
+    const int m  = K.size(1); // = h-1
+
+    // construction of the square {P0, P1, P2, P3} which contains (i+x,j+y) s.t.
+    // P0 = (i,j), P1 = (i+/-1,j), P2 = (i,j+/-1), P3 = (i+/-1,j+/-1)
+    int i1 = 0, i2 = 0, i3 = 0;
+    int j1 = 0, j2 = 0, j3 = 0;
+
+
+    if( x >= 0 && y >= 0)
+    {
+        i1 = std::min(n, std::max(0,i+1));  j1 = j;                             //const Point P1 (i+1,j  );
+        i2 = i;                             j2 = std::min(m, std::max(0,j-1));  //const Point P2 (i  ,j-1);
+        i3 = std::min(n, std::max(0,i+1));  j3 = std::min(m, std::max(0,j-1));  //const Point P3 (i+1,j-1);
+    }
+    else if( (x >= 0 && y < 0) || (i==0 && j < n) )
+    {
+        i1 = std::min(n, std::max(0,i+1));  j1 = j;                             //const Point P1 (i+1,j  );
+        i2 = i;                             j2 = std::min(m, std::max(0,j+1));  //const Point P2 (i  ,j+1);
+        i3 = std::min(n, std::max(0,i+1));  j3 = std::min(m, std::max(0,j+1));  //const Point P3 (i+1,j+1);
+    }
+    else if( x < 0 && y >= 0)
+    {
+        i1 = std::min(n, std::max(0,i-1));  j1 = j;                             //const Point P1 (i-1,j  );
+        i2 = i;                             j2 = std::min(m, std::max(0,j-1));  //const Point P2 (i  ,j-1);
+        i3 = std::min(n, std::max(0,i-1));  j3 = std::min(m, std::max(0,j-1));  //const Point P3 (i-1,j-1);
+    }
+    else if( x < 0 && y < 0)
+    {
+        i1 = std::min(n, std::max(0,i-1));  j1 = j;                             //const Point P1 (i-1,j  );
+        i2 = i;                             j2 = std::min(m, std::max(0,j+1));  //const Point P2 (i  ,j+1);
+        i3 = std::min(n, std::max(0,i-1));  j3 = std::min(m, std::max(0,j+1));  //const Point P3 (i-1,j+1);
+    }
+
+    const Point P0 (i ,j );
+    const Point P1 (i1,j1);
+    const Point P2 (i2,j2);
+    const Point P3 (i3,j3);
+
+
+//    std::cout << " (i,j)= ("      << i << "," << j << ")"
+//              << " (x,y)= ("      << x << "," << y << ")"
+//              << " P(i,j)= "      << P0
+//              << " P(i+1,j)= "    << P1
+//              << " P(i,j+1)= "    << P2
+//              << " P(i+1,j+1)= "  << P3
+//              << std::endl;
+
+
+    const double a = std::abs(x);
+    const double b = std::abs(y);
+
+    double val =   (1.0-a)*(1.0-b) * I(P0)
+                 +    a   *(1.0-b) * I(P1)
+                 + (1.0-a)*   b    * I(P2)
+                 +    a   *   b    * I(P3);
+
+    return val;
+
+}
+
+
 namespace DGtal {
   template <typename TComponent, DGtal::Dimension TM, DGtal::Dimension TN>
   bool
@@ -263,6 +355,7 @@ int main( int argc, char* argv[] )
 
   trace.beginBlock("Reading image");
   Image image = GenericReader<Image>::import( f1 );
+  Image end_image = image;
   trace.endBlock();
 
   // opening file
@@ -286,12 +379,16 @@ int main( int argc, char* argv[] )
   calculus.updateIndexes();
   trace.info() << calculus << endl;
   Calculus::PrimalForm0 g( calculus );
+  double min_g = 300.0, max_g = 0.0;
   for ( Calculus::Index index = 0; index < g.myContainer.rows(); index++)
     {
       const Calculus::SCell& cell = g.getSCell( index );
       g.myContainer( index ) = ((double) image( K.sCoords( cell ) )) /
     255.0;
+      min_g = std::min( min_g , g.myContainer( index ) );
+      max_g = std::max( max_g , g.myContainer( index ) );
     }
+  trace.info() << "min_g= " << min_g << " max_g= " << max_g << std::endl;
   trace.endBlock();
 
   // u = g at the beginning
@@ -363,8 +460,10 @@ int main( int argc, char* argv[] )
 
   ImageDouble imDouble = GenericReader<ImageDouble>::import( f1 );
   ImageSimpleMatrix2d T( domain );
+  ImageDouble Ix = imDouble, Iy = imDouble;
 
-  structureTensor(T, imDouble, s, r);
+  //structureTensor(T, imDouble, s, r);
+  structureTensor(T, Ix, Iy, imDouble, s, r);
 
   // eigenvalues & eigenvectors
   ImageDouble vp1(domain), vp2(domain);
@@ -399,11 +498,17 @@ int main( int argc, char* argv[] )
 
       vp1_max = max( vp1_max, *itvp1 );
     }
+  trace.info() << "max_vp1=" << vp1_max << std::endl;
 
-  DGtal::VTKWriter<Domain>( f2+"-vp1", vp1.domain() ) 	<< "data" << vp1;
-
+  if ( N == 2 )
+    {
+      DGtal::VTKWriter<Domain>( f2+"-vp1", vp1.domain() ) 	<< "data" << vp1;
+      DGtal::VTKWriter<Domain>( f2+"-Ix", Ix.domain() ) << "data" << Ix;
+      DGtal::VTKWriter<Domain>( f2+"-Iy", Iy.domain() ) << "data" << Iy;
+    }
 
   // Computation of n=(nx,ny) at each e_i
+
   //Calculus::PrimalForm1 v_n = v;
   Calculus::PrimalForm1 n_edge = v;
   Calculus::PrimalForm1 n_edge_x = v, n_edge_y = v, norm2_edge = v;
@@ -435,72 +540,114 @@ int main( int argc, char* argv[] )
       double norm2_mn = sqrt(mnx*mnx + mny*mny);
       mnx /= norm2_mn;
       mny /= norm2_mn;
-      n_edge_x.myContainer( index ) = mev1_sur_vp1_max*mnx + (1-mev1_sur_vp1_max); //mnx /= norm2_mn;
-      n_edge_y.myContainer( index ) = mev1_sur_vp1_max*mny + (1-mev1_sur_vp1_max); //mny /= norm2_mn;
-//      n_edge_x.myContainer( index ) = (1-t1)*t2*mnx + (1-(1-t1)*t2); //mnx /= norm2_mn;
-//      n_edge_y.myContainer( index ) = (1-t1)*t2*mny + (1-(1-t1)*t2); //mny /= norm2_mn;
+//      n_edge_x.myContainer( index ) = mev1_sur_vp1_max*mnx + (1-mev1_sur_vp1_max); //mnx /= norm2_mn;
+//      n_edge_y.myContainer( index ) = mev1_sur_vp1_max*mny + (1-mev1_sur_vp1_max); //mny /= norm2_mn;
+      n_edge_x.myContainer( index ) = (1-t1)*t2*mnx + (1-(1-t1)*t2); //mnx /= norm2_mn;
+      n_edge_y.myContainer( index ) = (1-t1)*t2*mny + (1-(1-t1)*t2); //mny /= norm2_mn;
 
       //double norm1_v1 = abs(mnx) + abs(mny);
 
-      if ( *(K.sDirs(c)) == 0 )
-        v.myContainer( index ) *= n_edge_x.myContainer( index );
-      else
-        v.myContainer( index ) *= n_edge_y.myContainer( index );
+//      if ( *(K.sDirs(c)) == 0 )
+//        v.myContainer( index ) *= n_edge_x.myContainer( index );
+//      else
+//        v.myContainer( index ) *= n_edge_y.myContainer( index );
 
       norm2_edge.myContainer( index ) = sqrt(n_edge_x.myContainer( index )*n_edge_x.myContainer( index ) + n_edge_y.myContainer( index )*n_edge_y.myContainer( index ));
     }
 
-  {
-  PrimalForm1ToImage( calculus, n_edge_x, dbl_image );
-  ostringstream ossN;
-  ossN << f2 << "-nx.pgm";
-  string str_image_n = ossN.str();
-  dbl_image >> str_image_n.c_str();
-  }
-  {
-  PrimalForm1ToImage( calculus, n_edge_y, dbl_image );
-  ostringstream ossN;
-  ossN << f2 << "-ny.pgm";
-  string str_image_n = ossN.str();
-  dbl_image >> str_image_n.c_str();
-  }
-  {
-  PrimalForm1ToImage( calculus, norm2_edge, dbl_image );
-  ostringstream ossN;
-  ossN << f2 << "-norm2.pgm";
-  string str_image_n = ossN.str();
-  dbl_image >> str_image_n.c_str();
-  }
+
+  savePrimalForm1ToImage( calculus, dbl_image, n_edge_x, f2 + "-nx.pgm");
+  savePrimalForm1ToImage( calculus, dbl_image, n_edge_y, f2 + "-ny.pgm");
+  savePrimalForm1ToImage( calculus, dbl_image, norm2_edge, f2 + "-norm2.pgm");
+
   trace.endBlock();
 
-  //Calculus::PrimalForm1 vG1( calculus );
-
   typedef Calculus::PrimalDerivative0::Container Matrix;
+
+
+  // Canny edge detector
+  Calculus::PrimalForm0 canny = g;
+  Calculus::PrimalForm0 dI = g;
+
+  for ( Calculus::Index index = 0; index < canny.myContainer.rows(); ++index )
+    {
+      const Calculus::SCell& c = canny.getSCell(index);
+      const int i = K.sCoord(c,0);
+      const int j = K.sCoord(c,1);
+//      const Point ij (i,j);
+
+      RealVector nu = v1(K.sCoords(c));
+      const double norm2_nu = std::sqrt( nu[0]*nu[0] + nu[1]*nu[1] );
+      nu[0] /= norm2_nu;
+      nu[1] /= norm2_nu;
+      const double x = nu[0];
+      const double y = nu[1];
+
+      const double Ix_ij         = Ix(K.sCoords(c)); // Ix(i,j)
+      const double Iy_ij         = Iy(K.sCoords(c)); // Iy(i,j)
+      const double Ix_ij_plus_n  = interpolation(calculus, Ix, i, j,  x,  y);
+      const double Ix_ij_minus_n = interpolation(calculus, Ix, i, j, -x, -y);
+      const double Iy_ij_plus_n  = interpolation(calculus, Iy, i, j,  x,  y);
+      const double Iy_ij_minus_n = interpolation(calculus, Iy, i, j, -x, -y);
+//      const double Ix_ij_plus_n  = interpolation(Ix, c, n1);
+//      const double Ix_ij_minus_n = interpolation(Ix, i, j, -x, -y);
+//      const double Iy_ij_plus_n  = interpolation(Iy, i, j,  x,  y);
+//      const double Iy_ij_minus_n = interpolation(Iy, i, j, -x, -y);
+
+//      std::cout << " Ix(i,j)= " << Ix_ij
+//                << " Iy(i,j)= " << Iy_ij
+//                << " Ix(i+x,j+x)= " << Ix_ij_plus_n
+//                << " Iy(i+x,j+y)= " << Iy_ij_plus_n
+//                << " Ix(i-x,j-x)= " << Ix_ij_minus_n
+//                << " Iy(i-x,j-y)= " << Iy_ij_minus_n
+//                << std::endl;
+
+
+      // |G| = |Gx| + |Gy|
+      const double grad_I           = std::abs(Ix_ij)         + std::abs(Iy_ij);
+      const double grad_I_plus_n    = std::abs(Ix_ij_plus_n)  + std::abs(Iy_ij_plus_n);
+      const double grad_I_minus_n   = std::abs(Ix_ij_minus_n) + std::abs(Iy_ij_minus_n);
+
+      dI.myContainer( index ) = grad_I;
+
+//      std::cout << " (i,j)= (" << i << "," << j << ")"
+//                << " (x,y)= (" << x << "," << y << ")"
+//                << " grad_I(i,j)= "     << grad_I
+//                << " grad_I(i+x,j+x)= " << grad_I_plus_n
+//                << " grad_I(i-x,j-x)= " << grad_I_minus_n
+//                << std::endl;
+
+      if (grad_I > grad_I_plus_n && grad_I > grad_I_minus_n)
+          canny.myContainer( index ) = 0.0;
+      else
+          canny.myContainer( index ) = 1.0;
+    }
+
+  savePrimalForm0ToImage( calculus, end_image, canny, f2 + "-canny.pgm" );
+  savePrimalForm0ToImage( calculus, end_image, dI, f2 + "-grad_I.pgm" );
 
   // Building diag(alpha)
   Calculus::PrimalIdentity0 diag_alpha = Id0;
   Calculus::PrimalForm0 alpha_var = g;
-  double max_alpha_var = 0.0;
-  for ( Calculus::Index index = 0; index < g.myContainer.rows(); ++index )
+  double alpha_max = 0.0, alpha_min = 1.0;
+  for ( Calculus::Index index = 0; index < canny.myContainer.rows(); ++index )
     {
       const Calculus::SCell& c = g.getSCell(index);
       const Calculus::Cell& uc = K.unsigns(c);
-      const double one_minus_vp1_sur_vp1_max = 1.0 - (vp1(K.uCoords(uc)) / vp1_max);
-      diag_alpha.myContainer.coeffRef( index, index )  = a * one_minus_vp1_sur_vp1_max;
-      alpha_var.myContainer( index ) = a * one_minus_vp1_sur_vp1_max;
-      max_alpha_var = std::max( max_alpha_var , alpha_var.myContainer( index ) );
+      const double one_minus_vp1_sur_vp1_max = std::max( 0.0 , 1.0 - (vp1(K.uCoords(uc)) / (0.9*vp1_max))*(vp1(K.uCoords(uc)) / (0.9*vp1_max)) );
+
+      diag_alpha.myContainer.coeffRef( index, index )  = a * canny.myContainer( index );
+      //diag_alpha.myContainer.coeffRef( index, index )  = a * one_minus_vp1_sur_vp1_max;
+
+      alpha_var.myContainer( index ) = a * canny.myContainer( index );
+      //alpha_var.myContainer( index ) = a * one_minus_vp1_sur_vp1_max;
+      alpha_min = std::min( alpha_min , alpha_var.myContainer( index ) );
+      alpha_max = std::max( alpha_max , alpha_var.myContainer( index ) );
     }
 
-  alpha_var.myContainer /= max_alpha_var;
-
-  {
-    Image end_image = image;
-    PrimalForm0ToImage( calculus, alpha_var, end_image );
-    ostringstream ossU;
-    ossU << f2 << "-a_var.pgm";
-    string str_image_u = ossU.str();
-    end_image >> str_image_u.c_str();
-  }
+  alpha_var.myContainer /= alpha_max;
+  savePrimalForm0ToImage( calculus, end_image, alpha_var, f2 + "-a_var.pgm" );
+  trace.info() << "min_alpha=" << alpha_min << " max_alpha=" << alpha_max << std::endl;
 
   // Building alpha_G0_1
   const Calculus::PrimalIdentity0 alpha_iG0 = diag_alpha; //a * calculus.identity<0, PRIMAL>(); // a * invG0;
@@ -664,15 +811,15 @@ int main( int argc, char* argv[] )
         {
           const Calculus::SCell& c = v.getSCell(index);
 
-          if ( *(K.sDirs(c)) == 0 )
-            v.myContainer( index ) *= n_edge_x.myContainer( index );
-          else
-            v.myContainer( index ) *= n_edge_y.myContainer( index );
+//          if ( *(K.sDirs(c)) == 0 )
+//            v.myContainer( index ) *= n_edge_x.myContainer( index );
+//          else
+//            v.myContainer( index ) *= n_edge_y.myContainer( index );
         }
 
       // a(u-g)^2
       const Calculus::PrimalForm0 u_minus_g = u - g;
-      double alpha_square_u_minus_g = a * innerProduct( calculus, u_minus_g, u_minus_g );
+      double alpha_square_u_minus_g = innerProduct( calculus, diag_alpha * u_minus_g, u_minus_g );
       trace.info() << "- a(u-g)^2      = " << alpha_square_u_minus_g << std::endl;
       // v^2|grad u|^2
 
@@ -701,9 +848,11 @@ int main( int argc, char* argv[] )
       double l_over_4e_square_1_minus_v
         = l / (4*eps) * innerProduct( calculus, one_minus_v, one_minus_v );
       trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
+
       // l.per
       double Lper = le_square_grad_v + l_over_4e_square_1_minus_v;
       trace.info() << "- l.per         = " << Lper << std::endl;
+
       // AT tot
       double ATtot = alpha_square_u_minus_g + square_v_grad_u + Lper;
 
@@ -732,38 +881,47 @@ int main( int argc, char* argv[] )
       int int_l = (int) floor(l);
       int dec_l = (int) (floor((l-floor(l))*10000000));
 
-      {
-        // Board2D board;
-        // board << calculus;
-        // board << CustomStyle( "KForm", new KFormStyle2D( 0.0, 1.0 ) ) << u;
-        // ostringstream oss;
-        // oss << f2 << "-u-" << i << ".eps";
-        // string str_u = oss.str(); //f2 + "-u-" + .eps";
-        // board.saveEPS( str_u.c_str() );
-        Image end_image = image;
-        PrimalForm0ToImage( calculus, u, end_image );
-        ostringstream ossU;
-        //ossU << f2 << "-l" << int_l << "_" << dec_l << "-u.pgm";
-        ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
-        string str_image_u = ossU.str();
-        end_image >> str_image_u.c_str();
-      }
-      {
-        // Board2D board;
-        // board << calculus;
-        // board << CustomStyle( "KForm", new KFormStyle2D( 0.0, 1.0 ) )
-        //       << v;
-        // ostringstream oss;
-        // oss << f2 << "-v-" << i << ".eps";
-        // string str_v = oss.str();
-        // board.saveEPS( str_v.c_str() );
-        PrimalForm1ToImage( calculus, v, dbl_image );
-        ostringstream ossV;
-        //ossV << f2 << "-l" << int_l << "_" << dec_l << "-v.pgm";
-        ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
-        string str_image_v = ossV.str();
-        dbl_image >> str_image_v.c_str();
-      }
+      ostringstream ossU;
+      ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
+      string str_image_u = ossU.str();
+      savePrimalForm0ToImage( calculus, end_image, u, str_image_u);
+
+      ostringstream ossV;
+      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+      string str_image_v = ossV.str();
+      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
+//      {
+//        // Board2D board;
+//        // board << calculus;
+//        // board << CustomStyle( "KForm", new KFormStyle2D( 0.0, 1.0 ) ) << u;
+//        // ostringstream oss;
+//        // oss << f2 << "-u-" << i << ".eps";
+//        // string str_u = oss.str(); //f2 + "-u-" + .eps";
+//        // board.saveEPS( str_u.c_str() );
+//        Image end_image = image;
+//        PrimalForm0ToImage( calculus, u, end_image );
+//        ostringstream ossU;
+//        //ossU << f2 << "-l" << int_l << "_" << dec_l << "-u.pgm";
+//        ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
+//        string str_image_u = ossU.str();
+//        end_image >> str_image_u.c_str();
+//      }
+//      {
+//        // Board2D board;
+//        // board << calculus;
+//        // board << CustomStyle( "KForm", new KFormStyle2D( 0.0, 1.0 ) )
+//        //       << v;
+//        // ostringstream oss;
+//        // oss << f2 << "-v-" << i << ".eps";
+//        // string str_v = oss.str();
+//        // board.saveEPS( str_v.c_str() );
+//        PrimalForm1ToImage( calculus, v, dbl_image );
+//        ostringstream ossV;
+//        //ossV << f2 << "-l" << int_l << "_" << dec_l << "-v.pgm";
+//        ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+//        string str_image_v = ossV.str();
+//        dbl_image >> str_image_v.c_str();
+//      }
       l1 /= lr;
     }
   // typedef SelfAdjointEigenSolver<MatrixXd> EigenSolverMatrix;
