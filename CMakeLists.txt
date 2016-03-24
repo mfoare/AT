@@ -21,6 +21,8 @@ if ( Boost_FOUND )
    SET(DGtalLibInc ${Boost_INCLUDE_DIRS})
 endif( Boost_FOUND )
 
+ADD_EXECUTABLE(at-u2-v0 at-u2-v0)
+
 ADD_EXECUTABLE(at-sansTenseur-0p-1p at-sansTenseur-0p-1p)
 ADD_EXECUTABLE(at-tenseur-0p-1p 		at-tenseur-0p-1p)
 ADD_EXECUTABLE(at-0p-1p 						at-0p-1p)
@@ -43,6 +45,8 @@ target_link_libraries (at-0p-1p-alpha-beta    ${DGTAL_LIBRARIES} ${CurvatureLibD
 target_link_libraries (at-0p-1p-couleur		    ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 target_link_libraries (test-couleur				    ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 target_link_libraries (at-TM-0pd-1p-matrix		${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
+target_link_libraries (at-u2-v0 ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
+
 #target_link_libraries (at-2p-1p								${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 #target_link_libraries (at-cremers							${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
 
