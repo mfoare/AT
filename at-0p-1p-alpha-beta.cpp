@@ -219,26 +219,26 @@ double interpolation(const Calculus& calculus, const ImageDouble& I, int const& 
     if( x >= 0 && y >= 0)
     {
         i1 = std::min(n, std::max(0,i+1));  j1 = j;                             //const Point P1 (i+1,j  );
-        i2 = i;                             j2 = std::min(m, std::max(0,j-1));  //const Point P2 (i  ,j-1);
-        i3 = std::min(n, std::max(0,i+1));  j3 = std::min(m, std::max(0,j-1));  //const Point P3 (i+1,j-1);
+        i2 = i;                             j2 = std::min(m, std::max(0,j+1));  //const Point P2 (i  ,j-1);
+        i3 = std::min(n, std::max(0,i+1));  j3 = std::min(m, std::max(0,j+1));  //const Point P3 (i+1,j-1);
     }
     else if( x >= 0 && y < 0)
     {
         i1 = std::min(n, std::max(0,i+1));  j1 = j;                             //const Point P1 (i+1,j  );
-        i2 = i;                             j2 = std::min(m, std::max(0,j+1));  //const Point P2 (i  ,j+1);
-        i3 = std::min(n, std::max(0,i+1));  j3 = std::min(m, std::max(0,j+1));  //const Point P3 (i+1,j+1);
+        i2 = i;                             j2 = std::min(m, std::max(0,j-1));  //const Point P2 (i  ,j+1);
+        i3 = std::min(n, std::max(0,i+1));  j3 = std::min(m, std::max(0,j-1));  //const Point P3 (i+1,j+1);
     }
     else if( x < 0 && y >= 0)
     {
         i1 = std::min(n, std::max(0,i-1));  j1 = j;                             //const Point P1 (i-1,j  );
-        i2 = i;                             j2 = std::min(m, std::max(0,j-1));  //const Point P2 (i  ,j-1);
-        i3 = std::min(n, std::max(0,i-1));  j3 = std::min(m, std::max(0,j-1));  //const Point P3 (i-1,j-1);
+        i2 = i;                             j2 = std::min(m, std::max(0,j+1));  //const Point P2 (i  ,j-1);
+        i3 = std::min(n, std::max(0,i-1));  j3 = std::min(m, std::max(0,j+1));  //const Point P3 (i-1,j-1);
     }
     else if( x < 0 && y < 0)
     {
         i1 = std::min(n, std::max(0,i-1));  j1 = j;                             //const Point P1 (i-1,j  );
-        i2 = i;                             j2 = std::min(m, std::max(0,j+1));  //const Point P2 (i  ,j+1);
-        i3 = std::min(n, std::max(0,i-1));  j3 = std::min(m, std::max(0,j+1));  //const Point P3 (i-1,j+1);
+        i2 = i;                             j2 = std::min(m, std::max(0,j-1));  //const Point P2 (i  ,j+1);
+        i3 = std::min(n, std::max(0,i-1));  j3 = std::min(m, std::max(0,j-1));  //const Point P3 (i-1,j+1);
     }
 
     const Point P0 (i ,j );
@@ -261,7 +261,7 @@ double interpolation(const Calculus& calculus, const ImageDouble& I, int const& 
 
     double val =   (1.0-a)*(1.0-b) * I(P0)
                  +    a   *(1.0-b) * I(P1)
-                 + (1.0-a)*   b    * I(P2)
+                 + (1.0-a)*   b * I(P2)
                  +    a   *   b    * I(P3);
 
     return val;
