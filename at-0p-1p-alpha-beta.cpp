@@ -214,14 +214,15 @@ double interpolation(const Calculus& calculus, const ImageDouble& I, int const& 
     int i1 = 0, i2 = 0, i3 = 0;
     int j1 = 0, j2 = 0, j3 = 0;
 
-
+    // min(n+1, max(...)) ????
+    // TODO : finish boundary conditions
     if( x >= 0 && y >= 0)
     {
         i1 = std::min(n, std::max(0,i+1));  j1 = j;                             //const Point P1 (i+1,j  );
         i2 = i;                             j2 = std::min(m, std::max(0,j-1));  //const Point P2 (i  ,j-1);
         i3 = std::min(n, std::max(0,i+1));  j3 = std::min(m, std::max(0,j-1));  //const Point P3 (i+1,j-1);
     }
-    else if( (x >= 0 && y < 0) || (i==0 && j < n) )
+    else if( x >= 0 && y < 0)
     {
         i1 = std::min(n, std::max(0,i+1));  j1 = j;                             //const Point P1 (i+1,j  );
         i2 = i;                             j2 = std::min(m, std::max(0,j+1));  //const Point P2 (i  ,j+1);
@@ -255,8 +256,8 @@ double interpolation(const Calculus& calculus, const ImageDouble& I, int const& 
 //              << std::endl;
 
 
-    const double a = std::abs(x);
-    const double b = std::abs(y);
+    const double a = std::fabs(x);
+    const double b = std::fabs(y);
 
     double val =   (1.0-a)*(1.0-b) * I(P0)
                  +    a   *(1.0-b) * I(P1)
@@ -535,8 +536,8 @@ int main( int argc, char* argv[] )
 
       RealVector n1 = v1(K.uCoords(cells[0]));
       RealVector n2 = v1(K.uCoords(cells[1]));
-      double mnx = std::abs(n1[0] + n2[0])/2.0;
-      double mny = std::abs(n1[1] + n2[1])/2.0;
+      double mnx = std::fabs(n1[0] + n2[0])/2.0;
+      double mny = std::fabs(n1[1] + n2[1])/2.0;
       double norm2_mn = sqrt(mnx*mnx + mny*mny);
       mnx /= norm2_mn;
       mny /= norm2_mn;
@@ -545,7 +546,7 @@ int main( int argc, char* argv[] )
       n_edge_x.myContainer( index ) = (1-t1)*t2*mnx + (1-(1-t1)*t2); //mnx /= norm2_mn;
       n_edge_y.myContainer( index ) = (1-t1)*t2*mny + (1-(1-t1)*t2); //mny /= norm2_mn;
 
-      //double norm1_v1 = abs(mnx) + abs(mny);
+      //double norm1_v1 = fabs(mnx) + fabs(mny);
 
 //      if ( *(K.sDirs(c)) == 0 )
 //        v.myContainer( index ) *= n_edge_x.myContainer( index );
@@ -568,6 +569,8 @@ int main( int argc, char* argv[] )
   // Canny edge detector
   Calculus::PrimalForm0 canny = g;
   Calculus::PrimalForm0 dI = g;
+  double grad_conf = 5.0;
+  double max_dI = 0.0;
 
   for ( Calculus::Index index = 0; index < canny.myContainer.rows(); ++index )
     {
@@ -585,14 +588,12 @@ int main( int argc, char* argv[] )
 
       const double Ix_ij         = Ix(K.sCoords(c)); // Ix(i,j)
       const double Iy_ij         = Iy(K.sCoords(c)); // Iy(i,j)
+
       const double Ix_ij_plus_n  = interpolation(calculus, Ix, i, j,  x,  y);
-      const double Ix_ij_minus_n = interpolation(calculus, Ix, i, j, -x, -y);
       const double Iy_ij_plus_n  = interpolation(calculus, Iy, i, j,  x,  y);
+
+      const double Ix_ij_minus_n = interpolation(calculus, Ix, i, j, -x, -y);
       const double Iy_ij_minus_n = interpolation(calculus, Iy, i, j, -x, -y);
-//      const double Ix_ij_plus_n  = interpolation(Ix, c, n1);
-//      const double Ix_ij_minus_n = interpolation(Ix, i, j, -x, -y);
-//      const double Iy_ij_plus_n  = interpolation(Iy, i, j,  x,  y);
-//      const double Iy_ij_minus_n = interpolation(Iy, i, j, -x, -y);
 
 //      std::cout << " Ix(i,j)= " << Ix_ij
 //                << " Iy(i,j)= " << Iy_ij
@@ -604,26 +605,28 @@ int main( int argc, char* argv[] )
 
 
       // |G| = |Gx| + |Gy|
-      const double grad_I           = std::abs(Ix_ij)         + std::abs(Iy_ij);
-      const double grad_I_plus_n    = std::abs(Ix_ij_plus_n)  + std::abs(Iy_ij_plus_n);
-      const double grad_I_minus_n   = std::abs(Ix_ij_minus_n) + std::abs(Iy_ij_minus_n);
+      const double grad_I           = std::fabs(Ix_ij)         + std::fabs(Iy_ij);
+      const double grad_I_plus_n    = std::fabs(Ix_ij_plus_n)  + std::fabs(Iy_ij_plus_n);
+      const double grad_I_minus_n   = std::fabs(Ix_ij_minus_n) + std::fabs(Iy_ij_minus_n);
 
       dI.myContainer( index ) = grad_I;
+      max_dI = std::max( max_dI , grad_I );
 
 //      std::cout << " (i,j)= (" << i << "," << j << ")"
 //                << " (x,y)= (" << x << "," << y << ")"
 //                << " grad_I(i,j)= "     << grad_I
-//                << " grad_I(i+x,j+x)= " << grad_I_plus_n
-//                << " grad_I(i-x,j-x)= " << grad_I_minus_n
+//                << " grad_I(i+x,j+y)= " << grad_I_plus_n
+//                << " grad_I(i-x,j-y)= " << grad_I_minus_n
 //                << std::endl;
 
-      if (grad_I > grad_I_plus_n && grad_I > grad_I_minus_n)
+      if (grad_I > grad_I_plus_n && grad_I > grad_I_minus_n && grad_I > grad_conf)
           canny.myContainer( index ) = 0.0;
       else
           canny.myContainer( index ) = 1.0;
     }
 
   savePrimalForm0ToImage( calculus, end_image, canny, f2 + "-canny.pgm" );
+  dI.myContainer /= max_dI;
   savePrimalForm0ToImage( calculus, end_image, dI, f2 + "-grad_I.pgm" );
 
   // Building diag(alpha)
@@ -691,6 +694,11 @@ int main( int argc, char* argv[] )
 
 
   // Building iG1_A_G0_tA_iG1 + tB_iG2_B
+//  // A.tA
+//  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1 );
+//  // tB.B
+//  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
+  // tB.B + A.tA
   const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
                                                             + dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
 
@@ -714,7 +722,7 @@ int main( int argc, char* argv[] )
       for ( Calculus::Index index = 0; index < l_sur_4.myContainer.rows(); index++)
         l_sur_4.myContainer( index ) = l/4.0;
       l_sur_4 = Id1 * l_sur_4; //tS_S * l_sur_4; //
-      double coef_eps = 2.0;
+      double coef_eps = 1.0;
       double eps = coef_eps*e;
 
       for( int k = 0 ; k < 5 ; ++k )
@@ -785,10 +793,10 @@ int main( int argc, char* argv[] )
 
                   for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
                     {
-                      n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
+                      n_infty = max( n_infty, fabs( v.myContainer( index ) - former_v.myContainer( index ) ) );
                       n_2    += ( v.myContainer( index ) - former_v.myContainer( index ) )
                                 * ( v.myContainer( index ) - former_v.myContainer( index ) );
-                      n_1    += abs( v.myContainer( index ) - former_v.myContainer( index ) );
+                      n_1    += fabs( v.myContainer( index ) - former_v.myContainer( index ) );
                     }
                   n_1 /= v.myContainer.rows();
                   n_2 = sqrt( n_2 / v.myContainer.rows() );
@@ -850,7 +858,7 @@ int main( int argc, char* argv[] )
       trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
 
       // l.per
-      double Lper = le_square_grad_v + l_over_4e_square_1_minus_v;
+      double Lper = 2.0* l_over_4e_square_1_minus_v; //le_square_grad_v + l_over_4e_square_1_minus_v;
       trace.info() << "- l.per         = " << Lper << std::endl;
 
       // AT tot
