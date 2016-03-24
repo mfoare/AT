@@ -28,15 +28,22 @@
   
 /** Compute the structure tensor.
 	* @param 	im 		The image over which the structure tensor will be computed;
-	*					T			The structure tensor;
-	*					sizeT	= image size;
-	*					s 		The first convolution parameter (default_value=3.0);
-	*					r 		The second convolution parameter (default_value=2.0).
+    *           T		The structure tensor;
+    *           imageIx
+    *           imageIy
+    *			sizeT	The image size;
+    *			s 		The first convolution parameter (default_value=3.0);
+    *			r 		The second convolution parameter (default_value=2.0).
 	*/
 	
+//template <typename ImageMatrix, typename ImageDouble>
+//void structureTensor( ImageMatrix& T,
+//                      const ImageDouble& imDouble,
+//                      double const& s, double const& r)
 template <typename ImageMatrix, typename ImageDouble>
-void structureTensor( ImageMatrix& T, const ImageDouble& imDouble,
-		  double const& s, double const& r)
+void structureTensor( ImageMatrix& T, ImageDouble& imageIx, ImageDouble& imageIy,
+                      const ImageDouble& imDouble,
+                      double const& s, double const& r)
 {	 
   using namespace std;
   using namespace DGtal;
@@ -55,8 +62,8 @@ void structureTensor( ImageMatrix& T, const ImageDouble& imDouble,
   
   /* FIRST CONVOLUTION */
 	
-  ImageDouble imageIx = imDouble;
-  ImageDouble imageIy = imDouble;
+  //ImageDouble imageIx = imDouble;
+  //ImageDouble imageIy = imDouble;
   FFT Ix(imDomain);
   FFT Iy(imDomain);
   

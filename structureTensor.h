@@ -27,9 +27,14 @@
 	*					r 		The second convolution parameter (default_value=2.0).
 	*/
 
+//template <typename ImageMatrix, typename ImageDouble>
+//void structureTensor( ImageMatrix& T,
+//                      const ImageDouble& imDouble,
+//                      double const& s = 3.0, double const& r = 2.0);
 template <typename ImageMatrix, typename ImageDouble>
-void structureTensor( ImageMatrix& T, const ImageDouble& imDouble,
-		  double const& s = 3.0, double const& r = 2.0);
+void structureTensor( ImageMatrix& T, ImageDouble& imageIx, ImageDouble& imageIy,
+                      const ImageDouble& imDouble,
+                      double const& s = 3.0, double const& r = 2.0);
 
 
 #include "structureTensor.ih"

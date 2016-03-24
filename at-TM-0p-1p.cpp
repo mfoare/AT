@@ -279,19 +279,17 @@ int main( int argc, char* argv[] )
    Calculus::PrimalAntiderivative1	sharp_y   = calculus.sharpDirectional<PRIMAL>(dimY);
   const Calculus::PrimalDerivative0 flat_x    = calculus.flatDirectional<PRIMAL>(dimX);
   const Calculus::PrimalDerivative0 flat_y    = calculus.flatDirectional<PRIMAL>(dimY);
-  
-  // BEG JOL
-  // Calculus::PrimalIdentity1 tSS = calculus.identity<1, PRIMAL>();
-  // for ( Calculus::Index index_i = 0; index_i < tSS.myContainer.rows(); index_i++ )
-  //   for ( Calculus::Index index_j = 0; index_j < tSS.myContainer.cols(); index_j++ )
-  //     {
-  //       tSS.myContainer.coeffRef( index_i, index_j ) = 0.0;
-  //       for ( Calculus::Index index_k = 0; index_k < tSS.myContainer.rows(); index_k++ )
-  //           tSS.myContainer.coeffRef( index_i, index_j ) +=  sharp_x.myContainer.coeffRef( index_k, index_i ) * sharp_x.myContainer.coeffRef( index_k, index_j )
-  //                                                          + sharp_y.myContainer.coeffRef( index_k, index_i ) * sharp_y.myContainer.coeffRef( index_k, index_j ) ;
-  //     }
-  Calculus::PrimalIdentity1 tSS = flat_x * sharp_x + flat_y * sharp_y; 
-  // END JOL
+
+  Calculus::PrimalIdentity1 tSS = calculus.identity<1, PRIMAL>();
+  for ( Calculus::Index index_i = 0; index_i < tSS.myContainer.rows(); index_i++ )
+    for ( Calculus::Index index_j = 0; index_j < tSS.myContainer.cols(); index_j++ )
+      {
+        tSS.myContainer.coeffRef( index_i, index_j ) = 0.0;
+        for ( Calculus::Index index_k = 0; index_k < tSS.myContainer.rows(); index_k++ )
+            tSS.myContainer.coeffRef( index_i, index_j ) +=  sharp_x.myContainer.coeffRef( index_k, index_i ) * sharp_x.myContainer.coeffRef( index_k, index_j )
+                                                           + sharp_y.myContainer.coeffRef( index_k, index_i ) * sharp_y.myContainer.coeffRef( index_k, index_j ) ;
+      }
+
   trace.endBlock();
 
 
@@ -360,11 +358,6 @@ int main( int argc, char* argv[] )
   Calculus::PrimalIdentity2 G2 		= 		(h*h) 	* calculus.identity<2, PRIMAL>();
   Calculus::PrimalIdentity2 invG2   = ( 1.0/(h*h) ) * calculus.identity<2, PRIMAL>();
 
-  typedef Calculus::PrimalDerivative0::Container Matrix;
-
-  const Matrix& A = primal_D0.myContainer;
-  const Matrix At = A.transpose();
-
 //  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
 //    {
 //      // extraction des normales des 2 0-cellules adjacentes a l'arete consideree
@@ -418,12 +411,9 @@ int main( int argc, char* argv[] )
 
   SolverV solver_lap_operator_v;
   /** A CORRIGER : pb avec le nouv lap  tB.inv(G2).B + inv(G1).A.G0.tA inv(G1) */
-  // BEG JOL
-  // const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
-  //                                                           + dual_D0 * primal_h2 * invG2 * primal_D1 );
-  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
-                                                            + G1 * dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
-  // END JOL
+      const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
+                                                           + dual_D0 * primal_h2 * invG2 * primal_D1 );
+
 
   // ancien lap
   //const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
@@ -464,21 +454,13 @@ int main( int argc, char* argv[] )
 //                  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
 //                    diagv2.myContainer.coeffRef( index, index ) = v.myContainer[ index ] * v.myContainer[ index ];
 
-                  // BEG JOL
-                  // double tvtSSv = 0.0;
-                  // Calculus::PrimalForm1 tSSv = tSS * v;
-                  // for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                  //   tvtSSv = v.myContainer( index ) * tSSv.myContainer( index );
-                  // const Calculus::PrimalIdentity0 Av2A = 	(- 1.0 * tvtSSv ) * dual_D1 * tSS * primal_h1 * primal_D0
-                  //                                        + a * invG0;
                   double tvtSSv = 0.0;
                   Calculus::PrimalForm1 tSSv = tSS * v;
                   for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                    tvtSSv += v.myContainer( index ) * tSSv.myContainer( index );
-                  // JOl: Je ne mets pas de metrique dans les hodges ici (?)
-                  const Calculus::PrimalIdentity0 Av2A = (- 1.0 * tvtSSv ) * dual_h2 * dual_D1 * primal_h1 * tSS * primal_D0
-                    + a * invG0;
-                  // END JOL
+                    tvtSSv = v.myContainer( index ) * tSSv.myContainer( index );
+
+                  const Calculus::PrimalIdentity0 Av2A = 	(- 1.0 * tvtSSv ) * dual_D1 * tSS * primal_h1 * primal_D0
+                                                         + a * invG0;
                   trace.info() << "Prefactoring matrix Av2A" << endl;
                   solver_u.compute( Av2A );
                   trace.info() << "Solving Av2A u = ag" << endl;

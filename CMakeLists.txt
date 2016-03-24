@@ -48,10 +48,3 @@ target_link_libraries (at-TM-0pd-1p-matrix		${DGTAL_LIBRARIES} ${CurvatureLibDep
 
 
 
-
-ADD_EXECUTABLE(TEST_RealFFT_NoExport TEST_RealFFT_NoExport)
-target_link_libraries (TEST_RealFFT_NoExport	${DGTAL_LIBRARIES} ${CurvatureLibDependencies} -lfftw3 -lm )
-ADD_EXECUTABLE(TEST_RealFFT TEST_RealFFT)
-target_link_libraries (TEST_RealFFT	${DGTAL_LIBRARIES} ${CurvatureLibDependencies} -lfftw3 -lm )
-
-

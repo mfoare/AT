@@ -326,10 +326,10 @@ int main( int argc, char* argv[] )
       // a.v^2|grad u|^2 
       double V2gradU2 = 0.0;
       SolverU solver_Av2A;
-      //Calculus::PrimalIdentity1 Mv2 = calculus.identity<1, PRIMAL>();
       Calculus::PrimalIdentity1 Mv2 = calculus.identity<1, PRIMAL>();
-      for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-        Mv2.myContainer.coeffRef( index, index ) = v.myContainer[ index ] * v.myContainer[ index ];
+      Calculus::PrimalIdentity1 Mv2 = calculus.identity<1, PRIMAL>();
+			for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+				Mv2.myContainer.coeffRef( index, index ) = v.myContainer[ index ] * v.myContainer[ index ];
       const Calculus::PrimalIdentity0 Av2A = - 1.0 * dual_h2 * dual_D1 * primal_h1 * Mv2 * primal_D0;
       solver_Av2A.compute( Av2A );
       for ( Calculus::Index index_i = 0; index_i < u.myContainer.rows(); index_i++)

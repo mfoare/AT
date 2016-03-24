@@ -1,5 +1,3 @@
-
-
 #include <sstream>
 #include <string>
 #include <boost/format.hpp>
@@ -324,7 +322,7 @@ int main( int argc, char* argv[] )
   const Calculus::DualHodge2      	dual_h2   = calculus.hodge<2,DUAL>();
 
   const DGtal::Dimension dimX = 0, dimY = 1;
-  
+
   // BEG JOL
   // Calculus::PrimalIdentity1 tSS = calculus.identity<1, PRIMAL>();
   // for ( Calculus::Index index_i = 0; index_i < tSS.myContainer.rows(); index_i++ )
@@ -350,15 +348,15 @@ int main( int argc, char* argv[] )
   //  Calculus::DualIdentity1   G1 		= calculus.identity<1, DUAL>();
   Calculus::PrimalIdentity1 G1    = Id1; //	= calculus.identity<1, PRIMAL>();
   Calculus::PrimalIdentity1 invG1 = Id1; //     = calculus.identity<1, PRIMAL>();
-  
+
   //  Calculus::DualIdentity0   G2 		= 		(h*h) 	* calculus.identity<0, DUAL>();
   Calculus::PrimalIdentity2 G2    = Id2; //	= 		(h*h) 	* calculus.identity<2, PRIMAL>();
   Calculus::PrimalIdentity2 invG2 = Id2; //     = ( 1.0/(h*h) ) * calculus.identity<2, PRIMAL>();
 
-  Calculus::PrimalForm1 vG1( calculus );
+  //Calculus::PrimalForm1 vG1( calculus );
 
   typedef Calculus::PrimalDerivative0::Container Matrix;
-  
+
   // Building alpha_G0_1
   const Calculus::PrimalIdentity0 alpha_iG0 = a * calculus.identity<0, PRIMAL>(); // a * invG0;
   const Calculus::PrimalForm0 alpha_iG0_g   = alpha_iG0 * g;
@@ -367,7 +365,7 @@ int main( int argc, char* argv[] )
   const Matrix& A = primal_D0.myContainer;
   const Matrix tA = A.transpose();
   Calculus::PrimalIdentity1 tA_A = G1;
-  tA_A.myContainer = tA * A;
+  G1.myContainer = tA * A;
 
   // Building tS_S
   Calculus::PrimalAntiderivative1   sharp_x   = calculus.sharpDirectional<PRIMAL>(dimX);
@@ -375,9 +373,9 @@ int main( int argc, char* argv[] )
   const Calculus::PrimalDerivative0 flat_x    = calculus.flatDirectional<PRIMAL>(dimX);
   const Calculus::PrimalDerivative0 flat_y    = calculus.flatDirectional<PRIMAL>(dimY);
   // All combinations below give the same result, which is strangely not an averaging.
-  const Matrix& Sx = sharp_x.myContainer; 
+  const Matrix& Sx = sharp_x.myContainer;
   const Matrix tSx = flat_x.myContainer; // Sx.transpose();
-  const Matrix& Sy = sharp_y.myContainer; 
+  const Matrix& Sy = sharp_y.myContainer;
   const Matrix tSy = flat_y.myContainer; // Sy.transpose();
   Calculus::PrimalIdentity1 tS_S = G1;
   tS_S.myContainer = (tSx * Sx + tSy * Sy); // (1.0/(h*h))*(tSx * Sx + tSy * Sy);
@@ -385,7 +383,7 @@ int main( int argc, char* argv[] )
   // tSx_Sx.myContainer = (tSx * Sx); // (1.0/(h*h))*(tSx * Sx + tSy * Sy);
   // Calculus::PrimalIdentity1 tSy_Sy = G1;
   // tSy_Sy.myContainer = (tSy * Sy); // (1.0/(h*h))*(tSx * Sx + tSy * Sy);
-  
+
   // Building tA_tS_S_A
   Calculus::PrimalIdentity0 tA_tS_S_A = G0;
   tA_tS_S_A.myContainer = tA * tS_S.myContainer * A;
@@ -399,7 +397,7 @@ int main( int argc, char* argv[] )
   //       trace.info() << "[" << it.row() << "," << it.col() << "] = " << it.value() << endl;
   //   }
 
-  
+
   // Building iG1_A_G0_tA_iG1 + tB_iG2_B
   const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
                                                             + dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
@@ -423,10 +421,10 @@ int main( int argc, char* argv[] )
       Calculus::PrimalForm1 l_sur_4( calculus );
       for ( Calculus::Index index = 0; index < l_sur_4.myContainer.rows(); index++)
         l_sur_4.myContainer( index ) = l/4.0;
-      l_sur_4 = Id1 * l_sur_4; // tS_S * l_sur_4;
+      l_sur_4 = tS_S * l_sur_4;
       double coef_eps = 2.0;
       double eps = coef_eps*e;
-      
+
       for( int k = 0 ; k < 5 ; ++k )
         {
           if (eps/coef_eps < 2*h)
@@ -434,14 +432,14 @@ int main( int argc, char* argv[] )
           else
             {
               eps /= coef_eps;
-              Calculus::PrimalIdentity1 BB = eps * lBB + ( l/(4.0*eps) ) * Id1; // tS_S;
+              Calculus::PrimalIdentity1 BB = eps * lBB + ( l/(4.0*eps) ) * tS_S; // Id1; // tS_S;
               int i = 0;
               for ( ; i < n; ++i )
                 {
                   trace.info() << "------ Iteration " << k << ":" << 	i << "/" << n << " ------" << endl;
                   trace.beginBlock("Solving for u");
                   trace.info() << "Building matrix Av2A" << endl;
-                  
+
                   double tvtSSv = 0.0;
                   Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
                   Calculus::PrimalDerivative0 v_A = diag_v * primal_D0;
@@ -488,11 +486,11 @@ int main( int argc, char* argv[] )
                                << " max=" << m2 << std::endl;
                   for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
                     v.myContainer( index ) = std::min( std::max(v.myContainer( index ), 0.0) , 1.0 );
-                  
+
                   double n_infty = 0.0;
                   double n_2 = 0.0;
                   double n_1 = 0.0;
-                  
+
                   for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
                     {
                       n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
@@ -502,7 +500,7 @@ int main( int argc, char* argv[] )
                     }
                   n_1 /= v.myContainer.rows();
                   n_2 = sqrt( n_2 / v.myContainer.rows() );
-                  
+
                   trace.info() << "Variation |v^k+1 - v^k|_oo = " << n_infty << endl;
                   trace.info() << "Variation |v^k+1 - v^k|_2 = " << n_2 << endl;
                   trace.info() << "Variation |v^k+1 - v^k|_1 = " << n_1 << endl;
@@ -545,7 +543,7 @@ int main( int argc, char* argv[] )
       for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
         one_minus_v.myContainer( index_i ) = 1.0 - one_minus_v.myContainer( index_i );
       double l_over_4e_square_1_minus_v
-        = l / (4*eps) * innerProduct( calculus, one_minus_v, one_minus_v ); 
+        = l / (4*eps) * innerProduct( calculus, one_minus_v, one_minus_v );
       trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
       // l.per
       double Lper = le_square_grad_v + l_over_4e_square_1_minus_v;
