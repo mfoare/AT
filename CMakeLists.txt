@@ -45,7 +45,7 @@ target_link_libraries (at-0p-1p-alpha-beta    ${DGTAL_LIBRARIES} ${CurvatureLibD
 target_link_libraries (at-0p-1p-couleur		    ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 target_link_libraries (test-couleur				    ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 target_link_libraries (at-TM-0pd-1p-matrix		${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
-target_link_libraries (at-u2-v0 ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
+target_link_libraries (at-u2-v0               ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 
 #target_link_libraries (at-2p-1p								${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 #target_link_libraries (at-cremers							${DGTAL_LIBRARIES} ${CurvatureLibDependencies})
