@@ -28,7 +28,7 @@
 #include <DGtal/kernel/domains/HyperRectDomain.h>
 #include <DGtal/kernel/SpaceND.h>
 #include <DGtal/images/ImageContainerBySTLVector.h>
-#include "RealFFT.h"
+#include "RealFFT.h" 
 #include "VTKWriter.h"
 
 // StructureTensor
@@ -89,12 +89,6 @@ void PrimalForm1ToImage( const Calculus& calculus, const typename Calculus::Prim
       int g = (int) round( v.myContainer[ index ] * 255.0 );
       g = std::max( 0 , std::min( 255, g ) );
       image.setValue( calculus.myKSpace.sKCoords( cell ), g );
-
-////      const Calculus::SCell& c = v.getSCell(index);
-//      const Calculus::Cell& uc = K.unsigns(cell);
-//      Cells uc_faces = K.uFaces(uc);
-//      image.setValue( calculus.myKSpace.sKCoords( K.uCoords(uc_faces[2]) ), 125 );
-//      image.setValue( calculus.myKSpace.sKCoords( K.uCoords(uc_faces[3]) ), 125 );
     }
 }
 
@@ -112,7 +106,7 @@ double tronc( const double& nb, const int& p )
 //        //oss3 << f2 << "-l" << tronc_l << "-v.pgm";
 //        oss3 << boost::format("%s-g.pgm") %f2;
 //        string str_image_v = oss3.str();
-//
+//        
 //        dbl_image >> str_image_v.c_str();
 
 
@@ -122,7 +116,7 @@ namespace DGtal {
   template <typename TComponent, DGtal::Dimension TM, DGtal::Dimension TN>
   bool
   operator!=( const DGtal::SimpleMatrix< TComponent, TM, TN >& m1,
-          const DGtal::SimpleMatrix< TComponent, TM, TN >& m2 )
+	      const DGtal::SimpleMatrix< TComponent, TM, TN >& m2 )
   {
     return ! ( m1.operator==( m2 ) );
   }
@@ -134,9 +128,9 @@ int main( int argc, char* argv[] )
   typedef ImageContainerBySTLVector<Domain, unsigned char>      Image;
   typedef ImageContainerBySTLVector<Domain, double>             ImageDouble;
   typedef ImageContainerBySTLVector<Domain,
-                    SimpleMatrix<double,2,2> >  ImageSimpleMatrix2d;
+				    SimpleMatrix<double,2,2> >  ImageSimpleMatrix2d;
   typedef ImageContainerBySTLVector<Domain, RealVector>         ImageVector;
-
+  
   typedef std::vector< unsigned char >::iterator 						ImageIterator;
   typedef std::vector< double >::iterator 									ImageDoubleIterator;
   typedef std::vector< SimpleMatrix<double,2,2> >::iterator ImageSimpleMatrix2dIterator;
@@ -161,7 +155,7 @@ int main( int argc, char* argv[] )
     ("rho,r", po::value<double>()->default_value( 3.0 ), "the parameter of the second convolution." )
     ("image-size,t", po::value<double>()->default_value( 64.0 ), "the size of the image." )
     ;
-
+    
   bool parseOK=true;
   po::variables_map vm;
   try {
@@ -174,15 +168,15 @@ int main( int argc, char* argv[] )
   if ( ! parseOK || vm.count("help") || !vm.count("input") )
     {
       cerr << "Usage: " << argv[0] << " -i toto.pgm\n"
-       << "Computes the Ambrosio-Tortorelli reconstruction/segmentation of an input image."
-       << endl << endl
-       << " / "
-       << endl
-       << " | a.(u-g)^2 + v^2 |grad u|^2 + le.|grad v|^2 + (l/4e).(1-v)^2 "
-       << endl
-       << " / "
-       << endl << endl
-       << general_opt << "\n";
+	   << "Computes the Ambrosio-Tortorelli reconstruction/segmentation of an input image."
+	   << endl << endl
+	   << " / "
+	   << endl
+	   << " | a.(u-g)^2 + v^2 |grad u|^2 + le.|grad v|^2 + (l/4e).(1-v)^2 "
+	   << endl
+	   << " / "
+	   << endl << endl
+	   << general_opt << "\n";
       return 1;
     }
   string f1 = vm[ "input" ].as<string>();
@@ -198,7 +192,7 @@ int main( int argc, char* argv[] )
   double t  = vm[ "image-size" ].as<double>();
   //double h  = vm[ "gridstep" ].as<double>();
   double h  = 1.0 / t;
-
+ 
   int    n  = vm[ "nbiter" ].as<int>();
   double s  = vm[ "sigma" ].as<double>();
   double r  = vm[ "rho" ].as<double>();
@@ -206,12 +200,12 @@ int main( int argc, char* argv[] )
   trace.beginBlock("Reading image");
   Image image = GenericReader<Image>::import( f1 );
   trace.endBlock();
-
+  
   // opening file
   const string file = f2 + ".txt";
   ofstream f(file.c_str());
-  f << "#  l \t" << " a \t" << " e \t" << "a(u-g)^2 \t" << "v^2|grad u|^2 \t" << "  le|grad v|^2 \t" << "  l(1-v)^2/4e \t" << " l.per \t" << "AT tot"<< endl;
-
+  f << "#  l \t" << " a \t" << " e \t" << "a(u-g)^2 \t" << "v^2|grad u|^2 \t" << "  le|grad v|^2 \t" << "  l(1-v)^2/4e \t" << " l.per \t" << "AT tot"<< endl; 
+ 
   trace.beginBlock("Creating calculus");
   typedef DiscreteExteriorCalculus<2,2, EigenLinearAlgebraBackend> Calculus;
   Domain domain = image.domain();
@@ -232,7 +226,7 @@ int main( int argc, char* argv[] )
     {
       const Calculus::SCell& cell = g.getSCell( index );
       g.myContainer( index ) = ((double) image( K.sCoords( cell ) )) /
-    255.0;
+	255.0;
     }
   //  {
   //    Board2D board;
@@ -243,161 +237,131 @@ int main( int argc, char* argv[] )
   //    board.saveEPS( str_calculus.c_str() );
   //  }
   trace.endBlock();
-
+ 
   trace.info() << "ag" << endl;
   const Calculus::PrimalForm0 ag = a * g;
   trace.info() << "u" << endl;
   Calculus::PrimalForm0 u = ag;
-  // trace.info() << "A^t*diag(v)^2*A = " << Av2A << endl;
+  // trace.info() << "A^t*diag(v)^2*A = " << Av2A << endl;	
   trace.info() << "v" << endl;
   Calculus::PrimalForm1 v( calculus );
   for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
     v.myContainer( index ) = 1.0;
+      
 
   trace.beginBlock("building AT functionnals");
   trace.info() << "primal_D0" << endl;
   const Calculus::PrimalDerivative0 	primal_D0 = calculus.derivative<0,PRIMAL>();
-  trace.info() << "primal_D1" << endl;
-  const Calculus::PrimalDerivative1 	primal_D1 = calculus.derivative<1,PRIMAL>();
-  trace.info() << "dual_D0" << endl;
-  const Calculus::DualDerivative0       dual_D0   = calculus.derivative<0,DUAL>();
+  trace.info() << "primal_h0" << endl;
+  const Calculus::PrimalHodge0  			primal_h0 = calculus.hodge<0,PRIMAL>();
+  trace.info() << "primal_h1" << endl;
+  const Calculus::PrimalHodge1  			primal_h1 = calculus.hodge<1,PRIMAL>();
   trace.info() << "dual_D1" << endl;
   const Calculus::DualDerivative1 		dual_D1   = calculus.derivative<1,DUAL>();
-  trace.info() << "primal_h0" << endl;
-  const Calculus::PrimalHodge0  		primal_h0 = calculus.hodge<0,PRIMAL>();
-  trace.info() << "primal_h1" << endl;
-  const Calculus::PrimalHodge1  		primal_h1 = calculus.hodge<1,PRIMAL>();
-  trace.info() << "primal_h2" << endl;
-  const Calculus::PrimalHodge2     		primal_h2 = calculus.hodge<2,PRIMAL>();
-  trace.info() << "dual_h1" << endl;
-  const Calculus::DualHodge1         	dual_h1   = calculus.hodge<1,DUAL>();
   trace.info() << "dual_h2" << endl;
   const Calculus::DualHodge2      		dual_h2   = calculus.hodge<2,DUAL>();
-
-  const DGtal::Dimension dimX = 0, dimY = 1;
-   Calculus::PrimalAntiderivative1	sharp_x   = calculus.sharpDirectional<PRIMAL>(dimX);
-   Calculus::PrimalAntiderivative1	sharp_y   = calculus.sharpDirectional<PRIMAL>(dimY);
-  const Calculus::PrimalDerivative0 flat_x    = calculus.flatDirectional<PRIMAL>(dimX);
-  const Calculus::PrimalDerivative0 flat_y    = calculus.flatDirectional<PRIMAL>(dimY);
-  
-  // BEG JOL
-  // Calculus::PrimalIdentity1 tSS = calculus.identity<1, PRIMAL>();
-  // for ( Calculus::Index index_i = 0; index_i < tSS.myContainer.rows(); index_i++ )
-  //   for ( Calculus::Index index_j = 0; index_j < tSS.myContainer.cols(); index_j++ )
-  //     {
-  //       tSS.myContainer.coeffRef( index_i, index_j ) = 0.0;
-  //       for ( Calculus::Index index_k = 0; index_k < tSS.myContainer.rows(); index_k++ )
-  //           tSS.myContainer.coeffRef( index_i, index_j ) +=  sharp_x.myContainer.coeffRef( index_k, index_i ) * sharp_x.myContainer.coeffRef( index_k, index_j )
-  //                                                          + sharp_y.myContainer.coeffRef( index_k, index_i ) * sharp_y.myContainer.coeffRef( index_k, index_j ) ;
-  //     }
-  Calculus::PrimalIdentity1 tSS = flat_x * sharp_x + flat_y * sharp_y; 
-  // END JOL
+  trace.info() << "primal_D1" << endl;
+  const Calculus::PrimalDerivative1 	primal_D1 = calculus.derivative<1,PRIMAL>();
+  trace.info() << "primal_h2" << endl;
+  const Calculus::PrimalHodge2     		primal_h2 = calculus.hodge<2,PRIMAL>();
+  trace.info() << "dual_D0" << endl;
+  const Calculus::DualDerivative0     dual_D0   = calculus.derivative<0,DUAL>();
+  trace.info() << "dual_h1" << endl;
+  const Calculus::DualHodge1         	dual_h1   = calculus.hodge<1,DUAL>();
   trace.endBlock();
-
-
-  { // STRUCTURE TENSOR
+  
+  
   trace.beginBlock("precomputation of the structure tensor");
-
+    
   constexpr typename DGtal::Dimension N = 2;
-
+ 	
   ImageDouble imDouble = GenericReader<ImageDouble>::import( f1 );
   ImageSimpleMatrix2d T( domain );
+  ImageDouble Ix( domain ), Iy( domain );
 
-  structureTensor(T, imDouble, s, r);
-
+  structureTensor(T, Ix, Iy, imDouble, s, r);
+  
   // eigenvalues & eigenvectors
   ImageDouble vp1(domain), vp2(domain);
   ImageVector v1(domain), v2(domain);
   double smax = 0.0;
-
+   
   ImageDoubleIterator itvp1 = vp1.begin();//, itvp2 = vp2.begin(); ATTENTION rajouter les ++itvp1 et ++itvp2 dans la boucle ci dessous
   ImageVectorIterator itv1 = v1.begin(), itv2 = v2.begin();
-
+  
   for ( ImageSimpleMatrix2dIterator itT = T.begin(); itT != T.end(); ++itv1, ++itv2, ++itvp1, ++itT )
     {
       SimpleMatrix<double,2,2> Tij;
       Tij = *itT;
-
+      
       SimpleMatrix<double,2,2> V;
       RealVector values;
       EigenDecomposition<2,double>::getEigenDecomposition( Tij, V, values );
       if (values[0] >= values[1])
-    {
-      *itvp1 = values[0];
-      //*itvp2 = values[1];
-      (*itv1)[0] = V(0,0); (*itv1)[1] = V(1,0);
-      (*itv2)[0] = V(0,1); (*itv2)[1] = V(1,1);
-    }
+	{
+	  *itvp1 = values[0];
+	  //*itvp2 = values[1];	
+	  (*itv1)[0] = V(0,0); (*itv1)[1] = V(1,0); 
+	  (*itv2)[0] = V(0,1); (*itv2)[1] = V(1,1); 
+	}
       else
-    {
-      *itvp1 = values[1];
-      //*itvp2 = values[0];
-      (*itv1)[0] = V(0,1); (*itv1)[1] = V(1,1);
-      (*itv2)[0] = V(0,0); (*itv2)[1] = V(1,0);
-    }
-
+	{
+	  *itvp1 = values[1];
+	  //*itvp2 = values[0];	
+	  (*itv1)[0] = V(0,1); (*itv1)[1] = V(1,1); 
+	  (*itv2)[0] = V(0,0); (*itv2)[1] = V(1,0); 
+	}
+      
       smax = max( smax, *itvp1 );
     }
-
+  
   DGtal::VTKWriter<Domain>( f2+"-vp1", vp1.domain() ) 	<< "data" << vp1;
-
-  trace.endBlock();
-  }
-
-
-  // Weight matrices
-
-//  Calculus::DualIdentity2   G0 		= ( 1.0/(h*h) ) * calculus.identity<2, DUAL>();
-  Calculus::PrimalIdentity0 G0 		= ( 1.0/(h*h) ) * calculus.identity<0, PRIMAL>();
-  Calculus::PrimalIdentity0 invG0   = 		(h*h) 	* calculus.identity<0, PRIMAL>();
-
-//  Calculus::DualIdentity1   G1 		= calculus.identity<1, DUAL>();
+  
+  
+  
+  // Weight matrix G1
+  
   Calculus::PrimalIdentity1 G1 		= calculus.identity<1, PRIMAL>();
-  Calculus::PrimalIdentity1 invG1   = calculus.identity<1, PRIMAL>();
+  Calculus::PrimalIdentity1 invG1 = calculus.identity<1, PRIMAL>();
   Calculus::PrimalForm1 vG1( calculus );
+  
+  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+    {	
+      // extraction des normales des 2 0-cellules adjacentes a l'arete consideree
+      const Calculus::SCell& c = v.getSCell(index);
+      const Calculus::Cell& uc = K.unsigns(c);
+      Cells cells = K.uFaces(uc);
+      Dimension d = K.uOrthDir(uc);
+      RealVector n1 = v1(K.uCoords(cells[0]));
+      RealVector n2 = v1(K.uCoords(cells[1]));
+      double eival1a = vp1(K.uCoords(cells[0]));
+      double eival1b = vp1(K.uCoords(cells[1]));
+      double eival2a = vp2(K.uCoords(cells[0]));
+      double eival2b = vp2(K.uCoords(cells[1]));
+      double mnx = (n1[0] + n2[0])/2.0;
+      double mny = (n1[1] + n2[1])/2.0;
+      double norm_mn = sqrt(mnx*mnx + mny*mny);
+      mnx /= norm_mn;
+      mny /= norm_mn;
+      double meival1 = (eival1a + eival1b)/2.0;
+      double meival2 = (eival2a + eival2b)/2.0; 
 
-//  Calculus::DualIdentity0   G2 		= 		(h*h) 	* calculus.identity<0, DUAL>();
-  Calculus::PrimalIdentity2 G2 		= 		(h*h) 	* calculus.identity<2, PRIMAL>();
-  Calculus::PrimalIdentity2 invG2   = ( 1.0/(h*h) ) * calculus.identity<2, PRIMAL>();
+      //		double mnx = (imageIx(K.uCoords(s[0]))+imageIx(K.uCoords(s[1])))/2.0;
+      //		double mny = (imageIy(K.uCoords(s[0]))+imageIy(K.uCoords(s[1])))/2.0; 
 
-  typedef Calculus::PrimalDerivative0::Container Matrix;
-
-  const Matrix& A = primal_D0.myContainer;
-  const Matrix At = A.transpose();
-
-//  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-//    {
-//      // extraction des normales des 2 0-cellules adjacentes a l'arete consideree
-//      const Calculus::SCell& c = v.getSCell(index);
-//      const Calculus::Cell& uc = K.unsigns(c);
-//      Cells cells = K.uFaces(uc);
-//      RealVector n1 = v1(K.uCoords(cells[0]));
-//      RealVector n2 = v1(K.uCoords(cells[1]));
-//      double eival1a = vp1(K.uCoords(cells[0]));
-//      double eival1b = vp1(K.uCoords(cells[1]));
-//      double eival2a = vp2(K.uCoords(cells[0]));
-//      double eival2b = vp2(K.uCoords(cells[1]));
-//      double mnx = (n1[0] + n2[0])/2.0;
-//      double mny = (n1[1] + n2[1])/2.0;
-//      double norm_mn = sqrt(mnx*mnx + mny*mny);
-//      mnx /= norm_mn;
-//      mny /= norm_mn;
-//      double meival1 = (eival1a + eival1b)/2.0;
-//      double meival2 = (eival2a + eival2b)/2.0;
-
-//      //		double mnx = (imageIx(K.uCoords(s[0]))+imageIx(K.uCoords(s[1])))/2.0;
-//      //		double mny = (imageIy(K.uCoords(s[0]))+imageIy(K.uCoords(s[1])))/2.0;
-
-//      double norm1_v1 = abs(mnx) + abs(mny);
-//      meival1 = min( smax, meival1 );
-//      meival2 = min( smax, meival2);
-//      double wG = 1.0 - pow(meival1/smax,2) * (1.0-1.0/norm1_v1);
-
-//      G1.myContainer.coeffRef( index, index )    =       h   * wG;
-//      invG1.myContainer.coeffRef( index, index ) = ( 1.0/h ) * wG;
-//      vG1.myContainer( index ) = wG;
-//    }
-
+      double norm1_v1 = abs(mnx) + abs(mny);
+      meival1 = min( smax, meival1 );
+      meival2 = min( smax, meival2);
+      double wG = 1.0 - pow(meival1/smax,2.0 ) * (1.0-1.0/norm1_v1);
+      //double wG = d==0 ? abs(mny) : abs(mnx);
+      //wG = std::max(wG,0.01);
+			
+      G1.myContainer.coeffRef( index, index )    = wG;
+      invG1.myContainer.coeffRef( index, index ) = 1.0 / wG;
+      vG1.myContainer( index ) = wG;
+      //std::cout << G1.myContainer.coeffRef( index, index ) << ' ' ;
+    }		
+	
   {
     PrimalForm1ToImage( calculus, vG1, dbl_image );
     ostringstream ossG;
@@ -405,7 +369,8 @@ int main( int argc, char* argv[] )
     string str_image_G = ossG.str();
     dbl_image >> str_image_G.c_str();
   }
-
+  trace.endBlock();
+  
   // SparseLU is so much faster than SparseQR
   // SimplicialLLT is much faster than SparseLU
   // typedef EigenLinearAlgebraBackend::SolverSparseQR LinearAlgebraSolver;
@@ -415,19 +380,10 @@ int main( int argc, char* argv[] )
   SolverU solver_u;
   typedef DiscreteExteriorCalculusSolver<Calculus, LinearAlgebraSolver, 1, PRIMAL, 1, PRIMAL> SolverV;
   SolverV solver_v;
-
+  
   SolverV solver_lap_operator_v;
-  /** A CORRIGER : pb avec le nouv lap  tB.inv(G2).B + inv(G1).A.G0.tA inv(G1) */
-  // BEG JOL
-  // const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
-  //                                                           + dual_D0 * primal_h2 * invG2 * primal_D1 );
-  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
-                                                            + G1 * dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
-  // END JOL
-
-  // ancien lap
-  //const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
-  //                                                          + G1 * dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
+  const Calculus::PrimalIdentity1 lap_operator_v = -( 1.0 / h ) * ( primal_D0 * dual_h2 * dual_D1 * primal_h1 * invG1 
+							    																								+ G1 * dual_h1 * dual_D0 * primal_h2 * primal_D1 );
   solver_lap_operator_v.compute( lap_operator_v );
 
   while ( l1 >= l2 )
@@ -439,162 +395,141 @@ int main( int argc, char* argv[] )
       Calculus::PrimalForm1 l_4( calculus );
       for ( Calculus::Index index = 0; index < l_4.myContainer.rows(); index++)
         l_4.myContainer( index ) = l/4.0;
-
+      
       Calculus::PrimalIdentity1 BB = 0.0 * lBB;
-
+      
       double coef_eps = 2.0;
       double eps = coef_eps*e;
-
+      
       for( int k = 0 ; k < 5 ; ++k )
-    {
-      if (eps/coef_eps < h*h)
-        break;
-      else
-        {
-          eps /= coef_eps;
-          BB = eps * lBB + ( l/(4.0*eps) ) * tSS;
-          int i = 0;
-          for ( ; i < n; ++i )
-                {
-                  trace.info() << "------ Iteration " << k << ":" << 	i << "/" << n << " ------" << endl;
-                  trace.beginBlock("Solving for u");
-                  trace.info() << "Building matrix Av2A" << endl;
+	{  
+	  if (eps/coef_eps < h*h)
+	    break;
+	  else
+	    {
+	      eps /= coef_eps;
+	      BB = eps * lBB + (h*l/(4.0*eps)) * invG1;//calculus.identity<1, PRIMAL>();  
+	      int i = 0;
+	      for ( ; i < n; ++i )
+		{
+		  trace.info() << "------ Iteration " << k << ":" << 	i << "/" << n << " ------" << endl;
+		  trace.beginBlock("Solving for u");
+		  trace.info() << "Building matrix Av2A" << endl;
+				      
+		  Calculus::PrimalIdentity1 Mv2 = calculus.identity<1, PRIMAL>();
+		  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+		    Mv2.myContainer.coeffRef( index, index ) = v.myContainer[ index ] * v.myContainer[ index ];
+				      
+		  const Calculus::PrimalIdentity0 Av2A = 	(- 1.0 / h) 	* dual_h2 * dual_D1 * primal_h1 * Mv2 * invG1 * primal_D0
+		    																				+ (a * h*h) * calculus.identity<0, PRIMAL>();
+		  trace.info() << "Prefactoring matrix Av2A" << endl;
+		  solver_u.compute( Av2A );
+		  trace.info() << "Solving Av2A u = ag" << endl;
+		  u = solver_u.solve( (h*h) * ag );
+		  trace.info() << ( solver_u.isValid() ? "OK" : "ERROR" ) << " " << solver_u.myLinearAlgebraSolver.info() << endl;
+		  trace.endBlock();
 
-//                  Calculus::PrimalIdentity1 diagv2 = calculus.identity<1, PRIMAL>();
-//                  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-//                    diagv2.myContainer.coeffRef( index, index ) = v.myContainer[ index ] * v.myContainer[ index ];
+		  trace.beginBlock("Solving for v");
+		  trace.info() << "Building matrix BB+Mw2" << endl;
+		  const Calculus::PrimalForm1 former_v = v;
+		  const Calculus::PrimalForm1 w = primal_D0 * u;
+				      
+		  Calculus::PrimalIdentity1 Mw2 = calculus.identity<1, PRIMAL>();
+		  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+		    Mw2.myContainer.coeffRef( index, index ) = (1.0/h) * w.myContainer[ index ] * w.myContainer[ index ];
+				        
+		  trace.info() << "Prefactoring matrix BB+Mw2" << endl;
+		  solver_v.compute( BB + Mw2 * invG1 );
+		  trace.info() << 	"Solving (BB+Mw2)v = l_4e" << endl;
+		  v = solver_v.solve( (h * (1.0/eps)) * invG1 * l_4 );
+		  trace.info() << ( solver_v.isValid() ? "OK" : "ERROR" ) << " " << solver_v.myLinearAlgebraSolver.info() << endl;
+		  trace.endBlock();
+				      
+		  double n_infty = 0.0; 
+		  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+		    n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
+		  trace.info() << "Variation |v^k+1 - v^k|_oo = " << n_infty << endl;
+		  if ( n_infty < 1e-4 ) break;
+		}
+	    }
+	}
+        
+        
+      // affichage des energies ***********************************************************************************
+      
+      typedef Calculus::SparseMatrix SparseMatrix;
+      typedef Eigen::Matrix<double,Dynamic,Dynamic> Matrix;
 
-                  // BEG JOL
-                  // double tvtSSv = 0.0;
-                  // Calculus::PrimalForm1 tSSv = tSS * v;
-                  // for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                  //   tvtSSv = v.myContainer( index ) * tSSv.myContainer( index );
-                  // const Calculus::PrimalIdentity0 Av2A = 	(- 1.0 * tvtSSv ) * dual_D1 * tSS * primal_h1 * primal_D0
-                  //                                        + a * invG0;
-                  double tvtSSv = 0.0;
-                  Calculus::PrimalForm1 tSSv = tSS * v;
-                  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                    tvtSSv += v.myContainer( index ) * tSSv.myContainer( index );
-                  // JOl: Je ne mets pas de metrique dans les hodges ici (?)
-                  const Calculus::PrimalIdentity0 Av2A = (- 1.0 * tvtSSv ) * dual_h2 * dual_D1 * primal_h1 * tSS * primal_D0
-                    + a * invG0;
-                  // END JOL
-                  trace.info() << "Prefactoring matrix Av2A" << endl;
-                  solver_u.compute( Av2A );
-                  trace.info() << "Solving Av2A u = ag" << endl;
-                  u = solver_u.solve( a * invG0 * g );
-                    trace.info() << ( solver_u.isValid() ? "OK" : "ERROR" ) << " " << solver_u.myLinearAlgebraSolver.info() << endl;
-                  trace.endBlock();
+      trace.beginBlock("Computing energies");
 
-              trace.beginBlock("Solving for v");
-              trace.info() << "Building matrix BB+Mw2" << endl;
-              const Calculus::PrimalForm1 former_v = v;
-              const Calculus::PrimalForm1 Au = primal_D0 * u;
+      // a(u-g)^2 
+      trace.info() << "- a(u-g)^2 " << std::endl;
+      double UmG2 = 0.0;
+      for ( Calculus::Index index = 0; index < u.myContainer.rows(); index++)
+        UmG2 += (a*h*h) * (u.myContainer( index ) - g.myContainer( index )) * (u.myContainer( index ) - g.myContainer( index ));
+      
+      // v^2|grad u|^2 
+      trace.info() << "- v^2|grad u|^2" << std::endl;
+      double V2gradU2 = 0.0;
+      SolverU solver_Av2A;
+      trace.info() << "  - Id" << std::endl;
+      Calculus::PrimalIdentity1 Mv2 = calculus.identity<1, PRIMAL>();
+      trace.info() << "  - M := Diag(v^2)" << std::endl;
+      for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+        Mv2.myContainer.coeffRef( index, index ) = v.myContainer[ index ] * v.myContainer[ index ];
+      trace.info() << "  - * D_1 * M * D_0" << std::endl;
+      const Calculus::PrimalIdentity0 Av2A = - (1.0/h) * dual_h2 * dual_D1 * primal_h1 * Mv2 * invG1 * primal_D0;
+      trace.info() << "  - N := compute (* D_1 * M * D_0)" << std::endl;
+      solver_Av2A.compute( Av2A );
+      // JOL: 1000 * plus rapide !
+      trace.info() << "  - u^t N u" << std::endl;
+      Calculus::PrimalForm0 u_prime = Av2A * u;
+      for ( Calculus::Index index = 0; index < u.myContainer.rows(); index++)
+        V2gradU2 += u.myContainer( index ) * u_prime.myContainer( index );
+      // for ( Calculus::Index index_i = 0; index_i < u.myContainer.rows(); index_i++)
+      // 	for ( Calculus::Index index_j = 0; index_j < u.myContainer.rows(); index_j++)
+      //     V2gradU2 += u.myContainer( index_i ) * Av2A.myContainer.coeff( index_i,index_j ) * u.myContainer( index_j ) ;
+      
+      // le|grad v|^2 
+      trace.info() << "- le|grad v|^2" << std::endl;
+      Calculus::PrimalForm1 v_prime = lap_operator_v * v;
+      double gradV2 = 0.0;
+      for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+        gradV2 += (l * eps / h) * v.myContainer( index ) * v_prime.myContainer( index );
+      // for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
+      //   for ( Calculus::Index index_j = 0; index_j < v.myContainer.rows(); index_j++)
+      //     gradV2 += l * eps * v.myContainer( index_i ) * lap_operator_v.myContainer.coeff( index_i,index_j ) * v.myContainer( index_j );
+      
+      // l(1-v)^2/4e 
+      trace.info() << "- l(1-v)^2/4e" << std::endl;
+      double Vm12 = 0.0;
+      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
+        Vm12 += (l*h/(4*eps)) * (1 - 2*v.myContainer( index_i ) + v.myContainer( index_i )*v.myContainer( index_i ));
+      
+      // l.per
+      trace.info() << "- l.per" << std::endl;
+      double Lper = gradV2 + Vm12;
+      //      double per = 0.0;
+      //      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
+      //      {
+      //        per += (1/(4*e)) * (1 - 2*v.myContainer( index_i ) + v.myContainer( index_i )*v.myContainer( index_i ));
+      //        for ( Calculus::Index index_j = 0; index_j < v.myContainer.rows(); index_j++)
+      //            per += e * v.myContainer( index_i ) * tBB.myContainer( index_i,index_j ) * v.myContainer( index_j );
+      //      }
+      
+      // AT tot
+      double ATtot = UmG2 + V2gradU2 + gradV2 + Vm12;
+      
+      //f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;   
+      f << tronc(l,8) << "\t" << a << "\t"  << tronc(eps,4) << "\t"  << tronc(UmG2,5) << "\t"  << tronc(V2gradU2,5) << "\t"  << tronc(gradV2,5) << "\t" << tronc(Vm12,5) << "\t" << tronc(Lper,5)  << "\t" << tronc(ATtot,5) << endl; 
 
-//              Calculus::PrimalIdentity1 diagAu2 = calculus.identity<1, PRIMAL>();
-//              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-//                diagAu2.myContainer.coeffRef( index, index ) = Au.myContainer[ index ] * Au.myContainer[ index ];
-
-              double tutAtSSAu = 0.0;
-              Calculus::PrimalForm1 tSSAu = tSS * Au;
-              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                tutAtSSAu = Au.myContainer( index ) * tSSAu.myContainer( index );
-
-              trace.info() << "Prefactoring matrix BB+Mw2" << endl;
-              solver_v.compute( BB + tutAtSSAu * tSS );
-              trace.info() << 	"Solving (BB+Mw2)v = l_4e" << endl;
-              v = solver_v.solve( (1.0/eps) * tSS * l_4 );
-              trace.info() << ( solver_v.isValid() ? "OK" : "ERROR" ) << " " << solver_v.myLinearAlgebraSolver.info() << endl;
-              trace.endBlock();
-
-              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                v.myContainer( index ) = std::min( std::max(v.myContainer( index ), 0.0) , 1.0 );
-
-              double n_infty = 0.0;
-              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
-              trace.info() << "Variation |v^k+1 - v^k|_oo = " << n_infty << endl;
-              if ( n_infty < 1e-4 ) break;
-            }
-        }
-    }
-
-/** A REPRENDRE */
-//      // affichage des energies ***********************************************************************************
-
-//      typedef Calculus::SparseMatrix SparseMatrix;
-//      typedef Eigen::Matrix<double,Dynamic,Dynamic> Matrix;
-
-//      trace.beginBlock("Computing energies");
-
-//      // a(u-g)^2
-//      trace.info() << "- a(u-g)^2 " << std::endl;
-//      double UmG2 = 0.0;
-//      for ( Calculus::Index index = 0; index < u.myContainer.rows(); index++)
-//        UmG2 += (a*h*h) * (u.myContainer( index ) - g.myContainer( index )) * (u.myContainer( index ) - g.myContainer( index ));
-
-//      // v^2|grad u|^2
-//      trace.info() << "- v^2|grad u|^2" << std::endl;
-//      double V2gradU2 = 0.0;
-//      SolverU solver_Av2A;
-//      trace.info() << "  - Id" << std::endl;
-//      Calculus::PrimalIdentity1 Mv2 = calculus.identity<1, PRIMAL>();
-//      trace.info() << "  - M := Diag(v^2)" << std::endl;
-//      for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-//        Mv2.myContainer.coeffRef( index, index ) = v.myContainer[ index ] * v.myContainer[ index ];
-//      trace.info() << "  - * D_1 * M * D_0" << std::endl;
-//      const Calculus::PrimalIdentity0 Av2A = - (1.0/h) * dual_h2 * dual_D1 * primal_h1 * Mv2 * invG1 * primal_D0;
-//      trace.info() << "  - N := compute (* D_1 * M * D_0)" << std::endl;
-//      solver_Av2A.compute( Av2A );
-//      // JOL: 1000 * plus rapide !
-//      trace.info() << "  - u^t N u" << std::endl;
-//      Calculus::PrimalForm0 u_prime = Av2A * u;
-//      for ( Calculus::Index index = 0; index < u.myContainer.rows(); index++)
-//        V2gradU2 += u.myContainer( index ) * u_prime.myContainer( index );
-//      // for ( Calculus::Index index_i = 0; index_i < u.myContainer.rows(); index_i++)
-//      // 	for ( Calculus::Index index_j = 0; index_j < u.myContainer.rows(); index_j++)
-//      //     V2gradU2 += u.myContainer( index_i ) * Av2A.myContainer.coeff( index_i,index_j ) * u.myContainer( index_j ) ;
-
-//      // le|grad v|^2
-//      trace.info() << "- le|grad v|^2" << std::endl;
-//      Calculus::PrimalForm1 v_prime = lap_operator_v * v;
-//      double gradV2 = 0.0;
-//      for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-//        gradV2 += (l * eps / h) * v.myContainer( index ) * v_prime.myContainer( index );
-//      // for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
-//      //   for ( Calculus::Index index_j = 0; index_j < v.myContainer.rows(); index_j++)
-//      //     gradV2 += l * eps * v.myContainer( index_i ) * lap_operator_v.myContainer.coeff( index_i,index_j ) * v.myContainer( index_j );
-
-//      // l(1-v)^2/4e
-//      trace.info() << "- l(1-v)^2/4e" << std::endl;
-//      double Vm12 = 0.0;
-//      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
-//        Vm12 += (l*h/(4*eps)) * (1 - 2*v.myContainer( index_i ) + v.myContainer( index_i )*v.myContainer( index_i ));
-
-//      // l.per
-//      trace.info() << "- l.per" << std::endl;
-//      double Lper = gradV2 + Vm12;
-//      //      double per = 0.0;
-//      //      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
-//      //      {
-//      //        per += (1/(4*e)) * (1 - 2*v.myContainer( index_i ) + v.myContainer( index_i )*v.myContainer( index_i ));
-//      //        for ( Calculus::Index index_j = 0; index_j < v.myContainer.rows(); index_j++)
-//      //            per += e * v.myContainer( index_i ) * tBB.myContainer( index_i,index_j ) * v.myContainer( index_j );
-//      //      }
-
-//      // AT tot
-//      double ATtot = UmG2 + V2gradU2 + gradV2 + Vm12;
-
-//      //f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;
-//      f << tronc(l,8) << "\t" << a << "\t"  << tronc(eps,4) << "\t"  << tronc(UmG2,5) << "\t"  << tronc(V2gradU2,5) << "\t"  << tronc(gradV2,5) << "\t" << tronc(Vm12,5) << "\t" << tronc(Lper,5)  << "\t" << tronc(ATtot,5) << endl;
-
-//      trace.endBlock();
+      trace.endBlock();
 
       // ***********************************************************************************************************************
 
       int int_l = (int) floor(l);
       int dec_l = (int) (floor((l-floor(l))*10000000));
-
+			
       {
         // Board2D board;
         // board << calculus;
@@ -659,5 +594,6 @@ int main( int argc, char* argv[] )
 
   return 0;
 }
+
 
 
