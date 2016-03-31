@@ -121,17 +121,6 @@ void savePrimalForm0ToImage( const Calculus& calculus, const Image& image, const
 }
 
 template <typename Calculus, typename Image>
-void savePrimalForm2ToImage( const Calculus& calculus, const Image& image, const typename Calculus::PrimalForm2& u, const string& filename )
-{
-    Image end_image = image;
-    PrimalForm2ToImage( calculus, u, end_image );
-    ostringstream ossU;
-    ossU << filename;
-    string str_image_u = ossU.str();
-    end_image >> str_image_u.c_str();
-}
-
-template <typename Calculus, typename Image>
 void savePrimalForm1ToImage( const Calculus& calculus, const Image& image, const typename Calculus::PrimalForm1& v, const string& filename )
 {
     Image end_image = image;
@@ -140,6 +129,17 @@ void savePrimalForm1ToImage( const Calculus& calculus, const Image& image, const
     ossV << filename;
     string str_image_v = ossV.str();
     end_image >> str_image_v.c_str();
+}
+
+template <typename Calculus, typename Image>
+void savePrimalForm2ToImage( const Calculus& calculus, const Image& image, const typename Calculus::PrimalForm2& u, const string& filename )
+{
+    Image end_image = image;
+    PrimalForm2ToImage( calculus, u, end_image );
+    ostringstream ossU;
+    ossU << filename;
+    string str_image_u = ossU.str();
+    end_image >> str_image_u.c_str();
 }
 
 double tronc( const double& nb, const int& p )
@@ -436,90 +436,83 @@ int main( int argc, char* argv[] )
 
       for ( double eps = e1; eps >= e2; eps /= er )
         {
-//          if (eps/coef_eps < 2*h)
-//            break;
-//          else
-//            {
-//              eps /= coef_eps;
-              Calculus::PrimalIdentity0 Per_Op      =  eps * l_LAPV + ( l/(4.0*eps) ) * Id0;
-              Calculus::PrimalForm0     l_1_over_4e = (1.0/eps) * l_1_over_4;
+          Calculus::PrimalIdentity0 Per_Op      =  eps * l_LAPV + ( l/(4.0*eps) ) * Id0;
+          Calculus::PrimalForm0     l_1_over_4e = (1.0/eps) * l_1_over_4;
 
-              int i = 0;
-              for ( ; i < n; ++i )
+          int i = 0;
+          for ( ; i < n; ++i )
+            {
+              trace.info() << "------ Iteration " << i << "/" << n << " ------" << endl;
+              trace.beginBlock("Solving for u as a 2-form");
+              trace.info() << "E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)" << endl;
+              trace.info() << "dE/du  = 2( a Id (u-g) + B diag(M v)^2 B^t u )" << endl;
+              trace.info() << "Building matrix U =  [ a Id + B diag(M v)^2 B^t ]" << endl;
+              Calculus::PrimalIdentity1 diag_v1 = diag( calculus, v1 );
+              Calculus::PrimalIdentity2 M_Id2   = -1.0 * primal_D1 * diag_v1 * diag_v1 * primal_AD2
+                + alpha_Id2;
+              trace.info() << "Prefactoring matrix U" << endl;
+              solver_u.compute( M_Id2 );
+              u = solver_u.solve( alpha_g );
+              trace.info() << "  => " << ( solver_u.isValid() ? "OK" : "ERROR" )
+                           << " " << solver_u.myLinearAlgebraSolver.info() << endl;
+              trace.endBlock();
+              // E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)
+              // dE/dv  = 2( M^t diag( B^t u )^2 M v  + l e A^t A v  - l/4e Id (1-v) )
+              //  dE/dv = 0 <=> [ M^t diag( B^t u )^2 M + l e A^t A  + l/4e Id ] v = l/4e 1
+              trace.beginBlock("Solving for v");
+              former_v = v;
+              trace.info() << "E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)" << endl;
+              trace.info() << " 2( M^t diag( B^t u )^2 M v  + l e A^t A v  - l/4e Id (1-v) )" << endl;
+              trace.info() << "Building matrix V = [ M^t diag( B^t u )^2 M + l e A^t A  + l/4e Id ]" << endl;
+              Calculus::PrimalIdentity0 N_Id0 = Per_Op;
+              const Calculus::PrimalIdentity1 diag_Bt_u = diag( calculus, primal_AD2 * u );
+              N_Id0.myContainer += ( M01.transpose() * diag_Bt_u * diag_Bt_u * M01).myContainer;
+              trace.info() << "Prefactoring matrix V" << endl;
+              solver_v.compute( N_Id0 );
+              trace.info() << "Solving V v = l/4e * 1" << endl;
+              v = solver_v.solve( l_1_over_4e );
+              trace.info() << "  => " << ( solver_v.isValid() ? "OK" : "ERROR" )
+                           << " " << solver_v.myLinearAlgebraSolver.info() << endl;
+              trace.info() << "Projecting v0 onto v1" << endl;
+              v1 = M01 * v;
+              trace.endBlock();
+
+              trace.beginBlock("Checking v, computing norms");
+              double m1 = 1.0;
+              double m2 = 0.0;
+              double ma = 0.0;
+              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
                 {
-                  trace.info() << "------ Iteration " << i << "/" << n << " ------" << endl;
-
-                  trace.beginBlock("Solving for u as a 2-form");
-                  trace.info() << "E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)" << endl;
-                  trace.info() << "dE/du  = 2( a Id (u-g) + B diag(M v)^2 B^t u )" << endl;
-                  trace.info() << "Building matrix U =  [ a Id + B diag(M v)^2 B^t ]" << endl;
-                  Calculus::PrimalIdentity1 diag_v1 = diag( calculus, v1 );
-                  Calculus::PrimalIdentity2 M_Id2   = -1.0 * primal_D1 * diag_v1 * diag_v1 * primal_AD2
-                    + alpha_Id2;
-                  trace.info() << "Prefactoring matrix U" << endl;
-                  solver_u.compute( M_Id2 );
-                  u = solver_u.solve( alpha_g );
-                  trace.info() << "  => " << ( solver_u.isValid() ? "OK" : "ERROR" ) 
-                               << " " << solver_u.myLinearAlgebraSolver.info() << endl;
-                  trace.endBlock();
-                  // E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)
-                  // dE/dv  = 2( M^t diag( B^t u )^2 M v  + l e A^t A v  - l/4e Id (1-v) )
-                  //  dE/dv = 0 <=> [ M^t diag( B^t u )^2 M + l e A^t A  + l/4e Id ] v = l/4e 1
-                  trace.beginBlock("Solving for v");
-                  former_v = v;
-                  trace.info() << "E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)" << endl;
-                  trace.info() << " 2( M^t diag( B^t u )^2 M v  + l e A^t A v  - l/4e Id (1-v) )" << endl;
-                  trace.info() << "Building matrix V = [ M^t diag( B^t u )^2 M + l e A^t A  + l/4e Id ]" << endl;
-                  Calculus::PrimalIdentity0 N_Id0 = Per_Op;
-                  const Calculus::PrimalIdentity1 diag_Bt_u = diag( calculus, primal_AD2 * u );
-                  N_Id0.myContainer += ( M01.transpose() * diag_Bt_u * diag_Bt_u * M01).myContainer;
-                  trace.info() << "Prefactoring matrix V" << endl;
-                  solver_v.compute( N_Id0 );
-                  trace.info() << "Solving V v = l/4e * 1" << endl;
-                  v = solver_v.solve( l_1_over_4e );
-                  trace.info() << "  => " << ( solver_v.isValid() ? "OK" : "ERROR" ) 
-                               << " " << solver_v.myLinearAlgebraSolver.info() << endl;
-                  trace.info() << "Projecting v0 onto v1" << endl;
-                  v1 = M01 * v;
-                  trace.endBlock();
-                  
-                  trace.beginBlock("Checking v, computing norms");
-                  double m1 = 1.0;
-                  double m2 = 0.0;
-                  double ma = 0.0;
-                  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                    {
-                      double val = v.myContainer( index );
-                      m1 = std::min( m1, val );
-                      m2 = std::max( m2, val );
-                      ma += val;
-                    }
-                  trace.info() << "1-form v: min=" << m1 << " avg=" << ( ma/ v.myContainer.rows() )
-                               << " max=" << m2 << std::endl;
-                  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                    v.myContainer( index ) = std::min( std::max(v.myContainer( index ), 0.0) , 1.0 );
-                  
-                  double n_infty = 0.0;
-                  double n_2 = 0.0;
-                  double n_1 = 0.0;
-                  
-                  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
-                    {
-                      n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
-                      n_2    += ( v.myContainer( index ) - former_v.myContainer( index ) )
-                        * ( v.myContainer( index ) - former_v.myContainer( index ) );
-                      n_1    += abs( v.myContainer( index ) - former_v.myContainer( index ) );
-                    }
-                  n_1 /= v.myContainer.rows();
-                  n_2 = sqrt( n_2 / v.myContainer.rows() );
-                  
-                  trace.info() << "Variation |v^k+1 - v^k|_oo = " << n_infty << endl;
-                  trace.info() << "Variation |v^k+1 - v^k|_2 = " << n_2 << endl;
-                  trace.info() << "Variation |v^k+1 - v^k|_1 = " << n_1 << endl;
-                  trace.endBlock();
-                  if ( n_infty < 1e-4 ) break;
+                  double val = v.myContainer( index );
+                  m1 = std::min( m1, val );
+                  m2 = std::max( m2, val );
+                  ma += val;
                 }
-//            }
+              trace.info() << "1-form v: min=" << m1 << " avg=" << ( ma/ v.myContainer.rows() )
+                           << " max=" << m2 << std::endl;
+              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+                v.myContainer( index ) = std::min( std::max(v.myContainer( index ), 0.0) , 1.0 );
+
+              double n_infty = 0.0;
+              double n_2 = 0.0;
+              double n_1 = 0.0;
+                  
+              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+                {
+                  n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
+                  n_2    += ( v.myContainer( index ) - former_v.myContainer( index ) )
+                    * ( v.myContainer( index ) - former_v.myContainer( index ) );
+                  n_1    += abs( v.myContainer( index ) - former_v.myContainer( index ) );
+                }
+              n_1 /= v.myContainer.rows();
+              n_2 = sqrt( n_2 / v.myContainer.rows() );
+
+              trace.info() << "Variation |v^k+1 - v^k|_oo = " << n_infty << endl;
+              trace.info() << "Variation |v^k+1 - v^k|_2 = " << n_2 << endl;
+              trace.info() << "Variation |v^k+1 - v^k|_1 = " << n_1 << endl;
+              trace.endBlock();
+              if ( n_infty < 1e-4 ) break;
+            }
         }
   
       // affichage des energies ********************************************************************
@@ -605,66 +598,9 @@ int main( int argc, char* argv[] )
       string str_image_v1 = ossV1.str();
       savePrimalForm1ToImage( calculus, dbl_image, v1, str_image_v1 );
 
-//      {
-//        // Board2D board;
-//        // board << calculus;
-//        // board << CustomStyle( "KForm", new KFormStyle2D( 0.0, 1.0 ) ) << u;
-//        // ostringstream oss;
-//        // oss << f2 << "-u-" << i << ".eps";
-//        // string str_u = oss.str(); //f2 + "-u-" + .eps";
-//        // board.saveEPS( str_u.c_str() );
-//        Image end_image = image;
-//        PrimalForm2ToImage( calculus, u, end_image );
-//        ostringstream ossU;
-//        //ossU << f2 << "-l" << int_l << "_" << dec_l << "-u.pgm";
-//        ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
-//        string str_image_u = ossU.str();
-//        end_image >> str_image_u.c_str();
-//      }
-//      {
-//        // Board2D board;
-//        // board << calculus;
-//        // board << CustomStyle( "KForm", new KFormStyle2D( 0.0, 1.0 ) )
-//        //       << v;
-//        // ostringstream oss;
-//        // oss << f2 << "-v-" << i << ".eps";
-//        // string str_v = oss.str();
-//        // board.saveEPS( str_v.c_str() );
-//        PrimalForm1ToImage( calculus, v1, dbl_image );
-//        ostringstream ossV;
-//        //ossV << f2 << "-l" << int_l << "_" << dec_l << "-v.pgm";
-//        ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
-//        string str_image_v = ossV.str();
-//        dbl_image >> str_image_v.c_str();
-//      }
-
       l1 /= lr;
     }
-  // typedef SelfAdjointEigenSolver<MatrixXd> EigenSolverMatrix;
-  // const EigenSolverMatrix eigen_solver(laplace.myContainer);
 
-  // const VectorXd eigen_values = eigen_solver.eigenvalues();
-  // const MatrixXd eigen_vectors = eigen_solver.eigenvectors();
-
-  // for (int kk=0; kk<laplace.myContainer.rows(); kk++)
-  // {
-  //     Calculus::Scalar eigen_value = eigen_values(kk, 0);
-
-  //     const VectorXd eigen_vector = eigen_vectors.col(kk);
-  //     const Calculus::DualForm0 eigen_form = Calculus::DualForm0(calculus, eigen_vector);
-  //     std::stringstream ss;
-  //     ss << "chladni_eigen_" << kk << ".svg";
-  //     const std::string filename = ss.str();
-  //     ss << "chladni_eigen_vector_" << kk << ".svg";
-  //     trace.info() << kk << " " << eigen_value << " " << sqrt(eigen_value) << " " << eigen_vector.minCoeff() << " " << eigen_vector.maxCoeff() << " " << standard_deviation(eigen_vector) << endl;
-
-  //     Board2D board;
-  //     board << domain;
-  //     board << calculus;
-  //     board << CustomStyle("KForm", new KFormStyle2D(eigen_vectors.minCoeff(),eigen_vectors.maxCoeff()));
-  //     board << eigen_form;
-  //     board.saveSVG(filename.c_str());
-  // }
 
   f.close();
 
