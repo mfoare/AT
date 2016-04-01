@@ -18,6 +18,8 @@
 #include "DGtal/io/readers/GenericReader.h"
 #include "DGtal/io/writers/GenericWriter.h"
 #include "DGtal/io/boards/Board2D.h"
+#include "DGtal/io/Display2DFactory.h"
+#include "DGtal/io/colormaps/GrayscaleColorMap.h"
 #include "DGtal/math/linalg/EigenSupport.h"
 #include "DGtal/dec/DiscreteExteriorCalculus.h"
 #include "DGtal/dec/DiscreteExteriorCalculusSolver.h"
@@ -43,6 +45,7 @@ double standard_deviation(const VectorXd& xx)
     accum += (xx(kk)-mean)*(xx(kk)-mean);
   return sqrt(accum)/(xx.size()-1);
 }
+
 
 template <typename Calculus, typename Image>
 void PrimalForm0ToImage( const Calculus& calculus, const typename Calculus::PrimalForm0& u, Image& image )
@@ -140,6 +143,68 @@ void savePrimalForm1ToImage( const Calculus& calculus, const Image& image, const
     ossV << filename;
     string str_image_v = ossV.str();
     end_image >> str_image_v.c_str();
+}
+
+template < typename Board, typename Calculus >
+void displayForms( Board& aBoard, const Calculus& calculus, 
+                   const typename Calculus::PrimalForm2& u,
+                   const typename Calculus::PrimalForm0& v )
+{
+
+  typedef typename Calculus::KSpace KSpace;
+  typedef typename Calculus::SCell  SCell;
+  typedef typename Calculus::Cell   Cell;
+  typedef typename KSpace::Space    Space;
+  typedef typename KSpace::Point    Point;
+  typedef HyperRectDomain<Space>    Domain;
+  typedef ImageContainerBySTLVector<Domain, unsigned char> Image;
+  const KSpace& K = calculus.myKSpace;
+  Domain domain( K.lowerBound(), K.upperBound() );
+  Image image_u( domain );
+  PrimalForm2ToImage( calculus, u, image_u );
+  typename Image::Value min = 0;
+  typename Image::Value max = 255;
+  DGtal::Display2DFactory::drawImage< DGtal::GrayscaleColorMap<float>, Image>( aBoard, image_u, min, max );
+  // aBoard << image_u;
+
+  Cell first = K.uSpel( K.lowerBound() );
+  Cell last  = K.uSpel( K.upperBound() ); 
+  aBoard << CustomStyle( first.className(), new CustomColors( Color( 0, 128, 0 ), Color( 0, 255, 0 ) ) );
+  Cell hor = K.uIncident( K.uPointel( K.lowerBound() ), 0, true );
+  do
+    {
+      Cell p0   = K.uIncident( hor, 0, false );
+      Cell p1   = K.uIncident( hor, 0, true );
+      double v0 = v.myContainer( calculus.getCellIndex( p0 ) );
+      double v1 = v.myContainer( calculus.getCellIndex( p1 ) );
+      if ( v0 <= 0.5 ) aBoard << p0;
+      if ( v1 <= 0.5 ) aBoard << p1;
+      if ( std::max(v0,v1) <= 0.5 ) aBoard << hor;
+    }
+  while ( K.uNext( hor, first, last ) );
+  Cell ver = K.uIncident( first, 1, true );
+  do
+    {
+      Cell p0   = K.uIncident( ver, 1, false );
+      Cell p1   = K.uIncident( ver, 1, true );
+      double v0 = v.myContainer( calculus.getCellIndex( p0 ) );
+      double v1 = v.myContainer( calculus.getCellIndex( p1 ) );
+      if ( v0 <= 0.5 ) aBoard << p0;
+      if ( v1 <= 0.5 ) aBoard << p1;
+      if ( std::max(v0,v1) <= 0.5 ) aBoard << ver;
+    }
+  while ( K.uNext( ver, first, last ) );
+}
+
+template <typename Calculus>
+void saveFormsToEps( const Calculus& calculus, 
+                     const typename Calculus::PrimalForm2& u,
+                     const typename Calculus::PrimalForm0& v,
+                     const string& filename )
+{
+    Board2D aBoard;
+    displayForms( aBoard, calculus, u, v );
+    aBoard.saveEPS( filename.c_str() );
 }
 
 double tronc( const double& nb, const int& p )
@@ -337,7 +402,7 @@ int main( int argc, char* argv[] )
   Domain domain = image.domain();
   Point p0 = domain.lowerBound(); p0 *= 2;
   Point p1 = domain.upperBound(); p1 *= 2;
-  p1      += Point::diagonal(1);
+  p1      += Point::diagonal(2);
   Domain kdomain( p0, p1 );
   Image dbl_image( kdomain );
   Calculus calculus;
@@ -595,15 +660,20 @@ int main( int argc, char* argv[] )
       string str_image_u = ossU.str();
       savePrimalForm2ToImage( calculus, end_image, u, str_image_u);
 
-      ostringstream ossV;
-      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
-      string str_image_v = ossV.str();
-      savePrimalForm0ToImage( calculus, end_image, v, str_image_v);
+      // ostringstream ossV;
+      // ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+      // string str_image_v = ossV.str();
+      // savePrimalForm0ToImage( calculus, end_image, v, str_image_v);
 
       ostringstream ossV1;
       ossV1 << boost::format("%s-l%.7f-v1.pgm") %f2 %l;
       string str_image_v1 = ossV1.str();
       savePrimalForm1ToImage( calculus, dbl_image, v1, str_image_v1 );
+
+      ostringstream ossU2V0;
+      ossV1 << boost::format("%s-l%.7f-u2-v0.eps") %f2 %l;
+      string str_image_u2_v0 = ossU2V0.str();
+      saveFormsToEps( calculus, u, v, str_image_u2_v0 );
 
 //      {
 //        // Board2D board;
