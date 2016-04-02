@@ -18,6 +18,8 @@
 #include "DGtal/io/readers/GenericReader.h"
 #include "DGtal/io/writers/GenericWriter.h"
 #include "DGtal/io/boards/Board2D.h"
+#include "DGtal/io/Display2DFactory.h"
+#include "DGtal/io/colormaps/GrayscaleColorMap.h"
 #include "DGtal/math/linalg/EigenSupport.h"
 #include "DGtal/dec/DiscreteExteriorCalculus.h"
 #include "DGtal/dec/DiscreteExteriorCalculusSolver.h"
@@ -43,6 +45,7 @@ double standard_deviation(const VectorXd& xx)
     accum += (xx(kk)-mean)*(xx(kk)-mean);
   return sqrt(accum)/(xx.size()-1);
 }
+
 
 template <typename Calculus, typename Image>
 void PrimalForm0ToImage( const Calculus& calculus, const typename Calculus::PrimalForm0& u, Image& image )
@@ -129,6 +132,87 @@ void savePrimalForm1ToImage( const Calculus& calculus, const Image& image, const
     ossV << filename;
     string str_image_v = ossV.str();
     end_image >> str_image_v.c_str();
+}
+
+template < typename Board, typename Calculus >
+void displayForms( Board& aBoard, const Calculus& calculus, 
+                   const typename Calculus::PrimalForm2& u,
+                   const typename Calculus::PrimalForm0& v )
+{
+
+  typedef typename Calculus::KSpace KSpace;
+  typedef typename Calculus::SCell  SCell;
+  typedef typename Calculus::Cell   Cell;
+  typedef typename Calculus::Index  Index;
+  typedef typename KSpace::Space    Space;
+  typedef typename KSpace::Point    Point;
+  typedef HyperRectDomain<Space>    Domain;
+  typedef ImageContainerBySTLVector<Domain, unsigned char> Image;
+  const KSpace& K = calculus.myKSpace;
+  Domain domain( K.lowerBound(), K.upperBound() );
+  Image image_u( domain );
+  PrimalForm2ToImage( calculus, u, image_u );
+  typename Image::Value min = 0;
+  typename Image::Value max = 255;
+  DGtal::GrayscaleColorMap<float> colormap( 0.0, 1.0 );
+  // DGtal::Display2DFactory::drawImage< DGtal::GrayscaleColorMap<float>, Image>( aBoard, image_u, min, max );
+  // aBoard << image_u;
+  aBoard.setLineWidth( 0.0 );
+  for ( Index idx = 0; idx < u.myContainer.rows(); ++idx )
+    {
+      Cell cell = K.unsigns( u.getSCell( idx ) );
+      Point x   = K.uCoords( cell );
+      float val = u.myContainer( idx );
+      Color c   = colormap( std::max( 0.0f, std::min( 1.0f, val ) ) );
+      aBoard.setPenColor( c );
+      aBoard.setFillColor( c );
+      aBoard.fillRectangle( NumberTraits<typename Image::Domain::Space::Integer>::
+                           castToDouble(x[0]) - 0.5,
+                           NumberTraits<typename Image::Domain::Space::Integer>::
+                           castToDouble(x[1]) + 0.5, 1, 1);
+    }
+  
+  Cell hor    = K.uIncident( K.uPointel( K.lowerBound() ), 0, true );
+  Cell hfirst = K.uCell( K.lowerBound(), hor ); 
+  Cell hlast  = K.uCell( K.upperBound()+Point(0,1), hor ); 
+  aBoard << CustomStyle( hor.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
+  do
+    {
+      Cell p0   = K.uIncident( hor, 0, false );
+      Cell p1   = K.uIncident( hor, 0, true );
+      double v0 = v.myContainer( calculus.getCellIndex( p0 ) );
+      double v1 = v.myContainer( calculus.getCellIndex( p1 ) );
+      if ( v0 <= 0.5 ) aBoard << p0;
+      if ( v1 <= 0.5 ) aBoard << p1;
+      if ( std::max(v0,v1) <= 0.5 ) aBoard << hor;
+    }
+  while ( K.uNext( hor, hfirst, hlast ) );
+  Cell ver    = K.uIncident( K.uPointel( K.lowerBound() ), 1, true );
+  Cell vfirst = K.uCell( K.lowerBound(), ver ); 
+  Cell vlast  = K.uCell( K.upperBound()+Point(1,0), ver ); 
+  aBoard << CustomStyle( hor.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
+  do
+    {
+      Cell p0   = K.uIncident( ver, 1, false );
+      Cell p1   = K.uIncident( ver, 1, true );
+      double v0 = v.myContainer( calculus.getCellIndex( p0 ) );
+      double v1 = v.myContainer( calculus.getCellIndex( p1 ) );
+      if ( v0 <= 0.5 ) aBoard << p0;
+      if ( v1 <= 0.5 ) aBoard << p1;
+      if ( std::max(v0,v1) <= 0.5 ) aBoard << ver;
+    }
+  while ( K.uNext( ver, vfirst, vlast ) );
+}
+
+template <typename Calculus>
+void saveFormsToEps( const Calculus& calculus, 
+                     const typename Calculus::PrimalForm2& u,
+                     const typename Calculus::PrimalForm0& v,
+                     const string& filename )
+{
+    Board2D aBoard;
+    displayForms( aBoard, calculus, u, v );
+    aBoard.saveEPS( filename.c_str() );
 }
 
 template <typename Calculus, typename Image>
@@ -337,7 +421,7 @@ int main( int argc, char* argv[] )
   Domain domain = image.domain();
   Point p0 = domain.lowerBound(); p0 *= 2;
   Point p1 = domain.upperBound(); p1 *= 2;
-  p1      += Point::diagonal(1);
+  p1      += Point::diagonal(2);
   Domain kdomain( p0, p1 );
   Image dbl_image( kdomain );
   Calculus calculus;
@@ -431,11 +515,10 @@ int main( int argc, char* argv[] )
       Calculus::PrimalForm0 l_1_over_4( calculus );
       for ( Index index = 0; index < l_1_over_4.myContainer.rows(); index++)
         l_1_over_4.myContainer( index ) = l / 4.0;
-
-      double eps = er*e;
-
+      double last_eps = e1;
       for ( double eps = e1; eps >= e2; eps /= er )
         {
+          last_eps = eps;
           Calculus::PrimalIdentity0 Per_Op      =  eps * l_LAPV + ( l/(4.0*eps) ) * Id0;
           Calculus::PrimalForm0     l_1_over_4e = (1.0/eps) * l_1_over_4;
 
@@ -540,7 +623,7 @@ int main( int argc, char* argv[] )
 
  //      // le|grad v|^2
        Calculus::PrimalForm0 v_prime = lap_operator_v * v;
-       double le_square_grad_v = l * eps * innerProduct( calculus, v, v_prime );
+       double le_square_grad_v = l * last_eps * innerProduct( calculus, v, v_prime );
        trace.info() << "- le|grad v|^2  = " << le_square_grad_v << std::endl;
 
        // l(1-v)^2/4e
@@ -548,7 +631,7 @@ int main( int argc, char* argv[] )
        for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
          one_minus_v.myContainer( index_i ) = 1.0 - one_minus_v.myContainer( index_i );
        double l_over_4e_square_1_minus_v
-         = l / (4*eps) * innerProduct( calculus, one_minus_v, one_minus_v );
+         = l / (4.0*last_eps) * innerProduct( calculus, one_minus_v, one_minus_v );
        trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
 
        // l.per
@@ -568,7 +651,7 @@ int main( int argc, char* argv[] )
 
 
        // f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;
-       f << tronc(l,8) << "\t" << a << "\t"  << tronc(eps,4)
+       f << tronc(l,8) << "\t" << a << "\t"  << tronc(last_eps,4)
          << "\t" << tronc(alpha_square_u_minus_g,5)
          << "\t" << tronc(square_v1_grad_u,5)
          << "\t" << tronc(le_square_grad_v,5)
@@ -588,15 +671,25 @@ int main( int argc, char* argv[] )
       string str_image_u = ossU.str();
       savePrimalForm2ToImage( calculus, end_image, u, str_image_u);
 
-      ostringstream ossV;
-      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
-      string str_image_v = ossV.str();
-      savePrimalForm0ToImage( calculus, end_image, v, str_image_v);
+      // ostringstream ossV;
+      // ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+      // string str_image_v = ossV.str();
+      // savePrimalForm0ToImage( calculus, end_image, v, str_image_v);
 
       ostringstream ossV1;
       ossV1 << boost::format("%s-l%.7f-v1.pgm") %f2 %l;
       string str_image_v1 = ossV1.str();
       savePrimalForm1ToImage( calculus, dbl_image, v1, str_image_v1 );
+
+      ostringstream ossU2V0;
+      ossU2V0 << boost::format("%s-l%.7f-u2-v0.eps") %f2 %l;
+      string str_image_u2_v0 = ossU2V0.str();
+      saveFormsToEps( calculus, u, v, str_image_u2_v0 );
+
+      ostringstream ossGV0;
+      ossGV0 << boost::format("%s-l%.7f-g-v0.eps") %f2 %l;
+      string str_image_g_v0 = ossGV0.str();
+      saveFormsToEps( calculus, g, v, str_image_g_v0 );
 
       l1 /= lr;
     }
