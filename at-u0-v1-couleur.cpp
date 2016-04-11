@@ -18,6 +18,8 @@
 #include "DGtal/io/readers/GenericReader.h"
 #include "DGtal/io/writers/GenericWriter.h"
 #include "DGtal/io/boards/Board2D.h"
+#include "DGtal/io/Display2DFactory.h"
+#include "DGtal/io/colormaps/GrayscaleColorMap.h"
 #include "DGtal/math/linalg/EigenSupport.h"
 #include "DGtal/dec/DiscreteExteriorCalculus.h"
 #include "DGtal/dec/DiscreteExteriorCalculusSolver.h"
@@ -148,6 +150,88 @@ void savePrimalForm1ToImage( const Calculus& calculus, const Image& image, const
     // typedef functors::IdentityFunctor<Color> IdColorFct;
     // PPMWriter<Image,IdColorFct>::exportPPM( str_image_v.c_str(), end_image, IdColorFct(), false );
 }
+
+template < typename Board, typename Calculus >
+void displayForms( Board& aBoard, const Calculus& calculus,
+                   const typename Calculus::PrimalForm0& ur,
+                   const typename Calculus::PrimalForm0& ug,
+                   const typename Calculus::PrimalForm0& ub,
+                   const typename Calculus::PrimalForm1& v )
+{
+
+  typedef typename Calculus::KSpace KSpace;
+  typedef typename Calculus::SCell  SCell;
+  typedef typename Calculus::Cell   Cell;
+  typedef typename Calculus::Index  Index;
+  typedef typename KSpace::Space    Space;
+  typedef typename KSpace::Point    Point;
+  typedef HyperRectDomain<Space>    Domain;
+  typedef ImageContainerBySTLVector<Domain, unsigned char> Image;
+  const KSpace& K = calculus.myKSpace;
+  Domain domain( K.lowerBound(), K.upperBound() );
+  Image image_u( domain );
+  //PrimalForm0ToImage( calculus, u, image_u );
+  //PrimalForms0ToColorImage( calculus, ur, ug, ub, image_u );
+  typename Image::Value min = 0;
+  typename Image::Value max = 255;
+  DGtal::GrayscaleColorMap<float> colormap( 0.0, 1.0 );
+  // DGtal::Display2DFactory::drawImage< DGtal::GrayscaleColorMap<float>, Image>( aBoard, image_u, min, max );
+  // aBoard << image_u;
+  aBoard.setLineWidth( 0.0 );
+  for ( Index idx = 0; idx < ur.myContainer.rows(); ++idx )
+    {
+      Cell cell = K.unsigns( ur.getSCell( idx ) );
+      Point x   = K.uCoords( cell );
+//      float red   = ur.myContainer( idx );
+//      float green = ug.myContainer( idx );
+//      float blue  = ub.myContainer( idx );
+      //Color c   = colormap( std::max( 0.0f, std::min( 1.0f, val ) ) );
+
+      int red   = (int) round( ur.myContainer[ idx ] * 255.0 );
+      red       = std::max( 0 , std::min( 255, red ) );
+      int green = (int) round( ug.myContainer[ idx ] * 255.0 );
+      green     = std::max( 0 , std::min( 255, green ) );
+      int blue  = (int) round( ub.myContainer[ idx ] * 255.0 );
+      blue      = std::max( 0 , std::min( 255, blue ) );
+
+      Color c( red , green , blue );
+      aBoard.setPenColor( c );
+      aBoard.setFillColor( c );
+      aBoard.fillRectangle( NumberTraits<typename Image::Domain::Space::Integer>::
+                           castToDouble(x[0]) - 0.5,
+                           NumberTraits<typename Image::Domain::Space::Integer>::
+                           castToDouble(x[1]) + 0.5, 1, 1);
+    }
+
+  for ( Index idx = 0; idx < v.myContainer.rows(); ++idx )
+    {
+      SCell scell = v.getSCell( idx );
+      const int xv = K.sKCoord( scell, 0 ) + 1;
+      const int yv = K.sKCoord( scell, 1 ) + 1;
+      const Point p(xv,yv);
+      Cell cell = K.uCell(p);
+      //Cell   cell = K.unsigns( v.getSCell( idx ) );
+      float val = v.myContainer( idx );
+      //aBoard << CustomStyle( cell.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
+      aBoard << CustomStyle( cell.className(), new CustomColors( Color( 0, 0, 0 ), Color( 0, 0, 0 ) ) );
+      if ( val <= 0.5 ) aBoard << cell;
+    }
+
+}
+
+template <typename Calculus>
+void saveFormsToEps( const Calculus& calculus,
+                     const typename Calculus::PrimalForm0& ur,
+                     const typename Calculus::PrimalForm0& ug,
+                     const typename Calculus::PrimalForm0& ub,
+                     const typename Calculus::PrimalForm1& v,
+                     const string& filename )
+{
+    Board2D aBoard;
+    displayForms( aBoard, calculus, ur, ug, ub, v );
+    aBoard.saveEPS( filename.c_str() );
+}
+
 
 double tronc( const double& nb, const int& p )
 {
@@ -626,6 +710,16 @@ int main( int argc, char* argv[] )
       ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
       string str_image_v = ossV.str();
       savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
+
+      ostringstream ossU0V1;
+      ossU0V1 << boost::format("%s-l%.7f-u0-v1.eps") %f2 %l;
+      string str_image_u0_v1 = ossU0V1.str();
+      saveFormsToEps( calculus, u[ 0 ], u[ 1 ], u[ 2 ], v, str_image_u0_v1 );
+
+//      ostringstream ossGV1;
+//      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
+//      string str_image_g_v1 = ossGV1.str();
+//      saveFormsToEps( calculus, g[ 0 ], g[ 1 ], g[ 2 ], v, str_image_g_v1 );
 
       l1 /= lr;
     }
