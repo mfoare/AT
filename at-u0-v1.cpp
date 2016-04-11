@@ -162,9 +162,7 @@ void displayForms( Board& aBoard, const Calculus& calculus,
       float val = v.myContainer( idx );
       aBoard << CustomStyle( cell.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
       if ( val <= 0.5 ) aBoard << cell;
-
     }
-
 
 }
 

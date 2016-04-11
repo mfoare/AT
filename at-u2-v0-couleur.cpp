@@ -33,7 +33,6 @@
 // StructureTensor
 //#include "structureTensor.h"
 
-
 using namespace std;
 using namespace DGtal;
 using namespace Eigen;
@@ -46,6 +45,7 @@ double standard_deviation(const VectorXd& xx)
     accum += (xx(kk)-mean)*(xx(kk)-mean);
   return sqrt(accum)/(xx.size()-1);
 }
+
 
 template <typename Calculus, typename Image>
 void PrimalForm0ToImage( const Calculus& calculus, const typename Calculus::PrimalForm0& u, Image& image )
@@ -65,26 +65,6 @@ void PrimalForm0ToImage( const Calculus& calculus, const typename Calculus::Prim
       int g = (int) round( u.myContainer[ index ] * 255.0 );
       g = std::max( 0 , std::min( 255, g ) );
       image.setValue( calculus.myKSpace.sCoords( cell ), g );
-    }
-}
-
-template <typename Calculus, typename Image>
-void PrimalForms0ToColorImage( const Calculus& calculus,
-                               const typename Calculus::PrimalForm0& ur,
-                               const typename Calculus::PrimalForm0& ug,
-                               const typename Calculus::PrimalForm0& ub,
-                               Image& image )
-{
-  for ( typename Calculus::Index index = 0; index < ur.myContainer.rows(); index++)
-    {
-      const typename Calculus::SCell& cell = ur.getSCell( index );
-      int red   = (int) round( ur.myContainer[ index ] * 255.0 );
-      red       = std::max( 0 , std::min( 255, red ) );
-      int green = (int) round( ug.myContainer[ index ] * 255.0 );
-      green     = std::max( 0 , std::min( 255, green ) );
-      int blue  = (int) round( ub.myContainer[ index ] * 255.0 );
-      blue      = std::max( 0 , std::min( 255, blue ) );
-      image.setValue( calculus.myKSpace.sCoords( cell ), Color( red, green, blue ) );
     }
 }
 
@@ -111,31 +91,56 @@ void PrimalForm1ToImage( const Calculus& calculus, const typename Calculus::Prim
     }
 }
 
-namespace DGtal {
-namespace functors {
-template <typename T>
-struct IdentityFunctor : public std::unary_function<T,T>
+template <typename Calculus, typename Image>
+void PrimalForm2ToImage( const Calculus& calculus, const typename Calculus::PrimalForm2& u, Image& image )
 {
-    T operator()( T t ) const { return t; }
-};
-}
+  double min_u = u.myContainer[ 0 ];
+  double max_u = u.myContainer[ 0 ];
+  for ( typename Calculus::Index index = 0; index < u.myContainer.rows(); index++)
+    {
+      min_u = min( min_u, u.myContainer[ index ] );
+      max_u = max( max_u, u.myContainer[ index ] );
+    }
+  trace.info() << "min_u=" << min_u << " max_u=" << max_u << std::endl;
+  for ( typename Calculus::Index index = 0; index < u.myContainer.rows(); index++)
+    {
+      const typename Calculus::SCell& cell = u.getSCell( index );
+      //int g = (int) round( ( u.myContainer[ index ] - min_u ) * 255.0 /( max_u - min_u ) );
+      int g = (int) round( u.myContainer[ index ] * 255.0 );
+      g = std::max( 0 , std::min( 255, g ) );
+      image.setValue( calculus.myKSpace.sCoords( cell ), g );
+    }
 }
 
 template <typename Calculus, typename Image>
-void savePrimalForms0ToPPMImage( const Calculus& calculus, const Image& image,
-                                 const typename Calculus::PrimalForm0& ur,
-                                 const typename Calculus::PrimalForm0& ug,
-                                 const typename Calculus::PrimalForm0& ub,
-                                 const string& filename )
+void PrimalForms2ToColorImage( const Calculus& calculus,
+                               const typename Calculus::PrimalForm2& ur,
+                               const typename Calculus::PrimalForm2& ug,
+                               const typename Calculus::PrimalForm2& ub,
+                               Image& image )
+{
+  for ( typename Calculus::Index index = 0; index < ur.myContainer.rows(); index++)
+    {
+      const typename Calculus::SCell& cell = ur.getSCell( index );
+      int red   = (int) round( ur.myContainer[ index ] * 255.0 );
+      red       = std::max( 0 , std::min( 255, red ) );
+      int green = (int) round( ug.myContainer[ index ] * 255.0 );
+      green     = std::max( 0 , std::min( 255, green ) );
+      int blue  = (int) round( ub.myContainer[ index ] * 255.0 );
+      blue      = std::max( 0 , std::min( 255, blue ) );
+      image.setValue( calculus.myKSpace.sCoords( cell ), Color( red, green, blue ) );
+    }
+}
+
+template <typename Calculus, typename Image>
+void savePrimalForm0ToImage( const Calculus& calculus, const Image& image, const typename Calculus::PrimalForm0& u, const string& filename )
 {
     Image end_image = image;
-    PrimalForms0ToColorImage( calculus, ur, ug, ub, end_image );
+    PrimalForm0ToImage( calculus, u, end_image );
     ostringstream ossU;
     ossU << filename;
     string str_image_u = ossU.str();
-
-    typedef functors::IdentityFunctor<Color> IdColorFct;
-    PPMWriter<Image,IdColorFct>::exportPPM( str_image_u.c_str(), end_image, IdColorFct(), true );
+    end_image >> str_image_u.c_str();
 }
 
 template <typename Calculus, typename Image>
@@ -147,16 +152,52 @@ void savePrimalForm1ToImage( const Calculus& calculus, const Image& image, const
     ossV << filename;
     string str_image_v = ossV.str();
     end_image >> str_image_v.c_str();
-    // typedef functors::IdentityFunctor<Color> IdColorFct;
-    // PPMWriter<Image,IdColorFct>::exportPPM( str_image_v.c_str(), end_image, IdColorFct(), false );
+}
+
+template <typename Calculus, typename Image>
+void savePrimalForm2ToImage( const Calculus& calculus, const Image& image, const typename Calculus::PrimalForm2& u, const string& filename )
+{
+    Image end_image = image;
+    PrimalForm2ToImage( calculus, u, end_image );
+    ostringstream ossU;
+    ossU << filename;
+    string str_image_u = ossU.str();
+    end_image >> str_image_u.c_str();
+}
+
+namespace DGtal {
+namespace functors {
+template <typename T>
+struct IdentityFunctor : public std::unary_function<T,T>
+{
+    T operator()( T t ) const { return t; }
+};
+}
+}
+
+template <typename Calculus, typename Image>
+void savePrimalForms2ToPPMImage( const Calculus& calculus, const Image& image,
+                                 const typename Calculus::PrimalForm2& ur,
+                                 const typename Calculus::PrimalForm2& ug,
+                                 const typename Calculus::PrimalForm2& ub,
+                                 const string& filename )
+{
+    Image end_image = image;
+    PrimalForms2ToColorImage( calculus, ur, ug, ub, end_image );
+    ostringstream ossU;
+    ossU << filename;
+    string str_image_u = ossU.str();
+
+    typedef functors::IdentityFunctor<Color> IdColorFct;
+    PPMWriter<Image,IdColorFct>::exportPPM( str_image_u.c_str(), end_image, IdColorFct(), true );
 }
 
 template < typename Board, typename Calculus >
 void displayForms( Board& aBoard, const Calculus& calculus,
-                   const typename Calculus::PrimalForm0& ur,
-                   const typename Calculus::PrimalForm0& ug,
-                   const typename Calculus::PrimalForm0& ub,
-                   const typename Calculus::PrimalForm1& v )
+                   const typename Calculus::PrimalForm2& ur,
+                   const typename Calculus::PrimalForm2& ug,
+                   const typename Calculus::PrimalForm2& ub,
+                   const typename Calculus::PrimalForm0& v )
 {
 
   typedef typename Calculus::KSpace KSpace;
@@ -170,8 +211,8 @@ void displayForms( Board& aBoard, const Calculus& calculus,
   const KSpace& K = calculus.myKSpace;
   Domain domain( K.lowerBound(), K.upperBound() );
   Image image_u( domain );
-  //PrimalForm0ToImage( calculus, u, image_u );
-  //PrimalForms0ToColorImage( calculus, ur, ug, ub, image_u );
+  //PrimalForm2ToImage( calculus, u, image_u );
+  //PrimalForms2ToColorImage( calculus, ur, ug, ub, image_u );
   typename Image::Value min = 0;
   typename Image::Value max = 255;
   //DGtal::GrayscaleColorMap<float> colormap( 0.0, 1.0 );
@@ -182,9 +223,7 @@ void displayForms( Board& aBoard, const Calculus& calculus,
     {
       Cell cell = K.unsigns( ur.getSCell( idx ) );
       Point x   = K.uCoords( cell );
-//      float red   = ur.myContainer( idx );
-//      float green = ug.myContainer( idx );
-//      float blue  = ub.myContainer( idx );
+      //float val = u.myContainer( idx );
       int red   = (int) round( ur.myContainer[ idx ] * 255.0 );
       red       = std::max( 0 , std::min( 255, red ) );
       int green = (int) round( ug.myContainer[ idx ] * 255.0 );
@@ -192,7 +231,7 @@ void displayForms( Board& aBoard, const Calculus& calculus,
       int blue  = (int) round( ub.myContainer[ idx ] * 255.0 );
       blue      = std::max( 0 , std::min( 255, blue ) );
 
-//      Color c   = colormap( std::max( 0.0f, std::min( 1.0f, val ) ) );
+      //Color c   = colormap( std::max( 0.0f, std::min( 1.0f, val ) ) );
       Color c( red , green , blue );
       aBoard.setPenColor( c );
       aBoard.setFillColor( c );
@@ -202,28 +241,44 @@ void displayForms( Board& aBoard, const Calculus& calculus,
                            castToDouble(x[1]) + 0.5, 1, 1);
     }
 
-  for ( Index idx = 0; idx < v.myContainer.rows(); ++idx )
+  Cell hor    = K.uIncident( K.uPointel( K.lowerBound() ), 0, true );
+  Cell hfirst = K.uCell( K.lowerBound(), hor );
+  Cell hlast  = K.uCell( K.upperBound()+Point(0,1), hor );
+  aBoard << CustomStyle( hor.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
+  do
     {
-      SCell scell = v.getSCell( idx );
-      const int xv = K.sKCoord( scell, 0 ) + 1;
-      const int yv = K.sKCoord( scell, 1 ) + 1;
-      const Point p(xv,yv);
-      Cell cell = K.uCell(p);
-      //Cell   cell = K.unsigns( v.getSCell( idx ) );
-      float val = v.myContainer( idx );
-      //aBoard << CustomStyle( cell.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
-      aBoard << CustomStyle( cell.className(), new CustomColors( Color( 0, 0, 0 ), Color( 0, 0, 0 ) ) );
-      if ( val <= 0.5 ) aBoard << cell;
+      Cell p0   = K.uIncident( hor, 0, false );
+      Cell p1   = K.uIncident( hor, 0, true );
+      double v0 = v.myContainer( calculus.getCellIndex( p0 ) );
+      double v1 = v.myContainer( calculus.getCellIndex( p1 ) );
+      if ( v0 <= 0.5 ) aBoard << p0;
+      if ( v1 <= 0.5 ) aBoard << p1;
+      if ( std::max(v0,v1) <= 0.5 ) aBoard << hor;
     }
-
+  while ( K.uNext( hor, hfirst, hlast ) );
+  Cell ver    = K.uIncident( K.uPointel( K.lowerBound() ), 1, true );
+  Cell vfirst = K.uCell( K.lowerBound(), ver );
+  Cell vlast  = K.uCell( K.upperBound()+Point(1,0), ver );
+  aBoard << CustomStyle( hor.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
+  do
+    {
+      Cell p0   = K.uIncident( ver, 1, false );
+      Cell p1   = K.uIncident( ver, 1, true );
+      double v0 = v.myContainer( calculus.getCellIndex( p0 ) );
+      double v1 = v.myContainer( calculus.getCellIndex( p1 ) );
+      if ( v0 <= 0.5 ) aBoard << p0;
+      if ( v1 <= 0.5 ) aBoard << p1;
+      if ( std::max(v0,v1) <= 0.5 ) aBoard << ver;
+    }
+  while ( K.uNext( ver, vfirst, vlast ) );
 }
 
 template <typename Calculus>
 void saveFormsToEps( const Calculus& calculus,
-                     const typename Calculus::PrimalForm0& ur,
-                     const typename Calculus::PrimalForm0& ug,
-                     const typename Calculus::PrimalForm0& ub,
-                     const typename Calculus::PrimalForm1& v,
+                     const typename Calculus::PrimalForm2& ur,
+                     const typename Calculus::PrimalForm2& ug,
+                     const typename Calculus::PrimalForm2& ub,
+                     const typename Calculus::PrimalForm0& v,
                      const string& filename )
 {
     Board2D aBoard;
@@ -317,7 +372,6 @@ double innerProduct( const Calculus& calculus,
   return val;
 }
 
-
 namespace DGtal {
   template <typename TComponent, DGtal::Dimension TM, DGtal::Dimension TN>
   bool
@@ -331,28 +385,28 @@ namespace DGtal {
 int main( int argc, char* argv[] )
 {
   using namespace Z2i;
-  typedef ImageContainerBySTLVector<Domain, Color>              ColorImage;
-  typedef ImageContainerBySTLVector<Domain, unsigned char>      GreyLevelImage;
+    typedef ImageContainerBySTLVector<Domain, Color>            ColorImage;
+  typedef ImageContainerBySTLVector<Domain, unsigned char>      Image;
   typedef ImageContainerBySTLVector<Domain, double>             ImageDouble;
   typedef ImageContainerBySTLVector<Domain,
-                    SimpleMatrix<double,2,2> >  ImageSimpleMatrix2d;
+                    SimpleMatrix<double,2,2> >                  ImageSimpleMatrix2d;
   typedef ImageContainerBySTLVector<Domain, RealVector>         ImageVector;
 
-  typedef std::vector< unsigned char >::iterator 			ImageIterator;
-  typedef std::vector< double >::iterator 					ImageDoubleIterator;
-  typedef std::vector< SimpleMatrix<double,2,2> >::iterator ImageSimpleMatrix2dIterator;
-  typedef std::vector< RealVector >::iterator 				ImageVectorIterator;
+  typedef std::vector< unsigned char >::iterator 				ImageIterator;
+  typedef std::vector< double >::iterator 						ImageDoubleIterator;
+  typedef std::vector< SimpleMatrix<double,2,2> >::iterator     ImageSimpleMatrix2dIterator;
+  typedef std::vector< RealVector >::iterator 					ImageVectorIterator;
 
   // parse command line ----------------------------------------------
   namespace po = boost::program_options;
   po::options_description general_opt("Allowed options are: ");
   general_opt.add_options()
     ("help,h", "display this message")
-    ("input,i", po::value<string>(), "the input image PPM filename." )
+    ("input,i", po::value<string>(), "the input image filename." )
     ("output,o", po::value<string>()->default_value( "AT" ), "the output image basename." )
     ("lambda,l", po::value<double>(), "the parameter lambda." )
-    ("lambda-1,1", po::value<double>()->default_value( 0.3125 ), "the initial parameter lambda (l1)." ) // 0.3125
-    ("lambda-2,2", po::value<double>()->default_value( 0.00005 ), "the final parameter lambda (l2)." )
+    ("lambda-1", po::value<double>()->default_value( 0.3125 ), "the initial parameter lambda (l1)." ) // 0.3125
+    ("lambda-2", po::value<double>()->default_value( 0.00005 ), "the final parameter lambda (l2)." )
     ("lambda-ratio,q", po::value<double>()->default_value( sqrt(2) ), "the division ratio for lambda from l1 to l2." )
     ("alpha,a", po::value<double>()->default_value( 1.0 ), "the parameter alpha." )
     ("epsilon,e", po::value<double>()->default_value( 1.0 ), "the initial and final parameter epsilon of AT functional at the same time." )
@@ -378,20 +432,17 @@ int main( int argc, char* argv[] )
   if ( ! parseOK || vm.count("help") || !vm.count("input") )
     {
       cerr << "Usage: " << argv[0] << " -i toto.pgm\n"
-       << "Computes the Ambrosio-Tortorelli reconstruction/segmentation of an input image."
-       << endl << endl
-       << " / "
-       << endl
-       << " | a.(u-g)^2 + v^2 |grad u|^2 + le.|grad v|^2 + (l/4e).(1-v)^2 "
-       << endl
-       << " / "
-       << endl
-       << "Discretized as (u 0-form, v 1-form, A vertex-edge bdry, B edge-face bdy)" << endl
-       << "E(u,v) = a(u-g)^t (u-g) +  u^t A^t diag(v)^2 A^t u + l e v^t (A A^t + B^t B) v + l/(4e) (1-v)^t (1-v)" << endl
-       << endl
-       << general_opt << "\n"
-       << "Example: ./at-u0-v1 -i ../Images/cerclesTriangle64b02.pgm -o tmp -a 0.05 -e 1 -1 0.1 -2 0.00001 -t 64"
-       << endl;
+           << "Computes the Ambrosio-Tortorelli reconstruction/segmentation of an input image."
+           << endl << endl
+           << " / " << endl
+           << " | a.(u-g)^2 + v^2 |grad u|^2 + le.|grad v|^2 + (l/4e).(1-v)^2 " << endl
+           << " / " << endl
+           << "Discretized as (u 2-form, v 0-form, A vertex-edge bdry, B edge-face bdy, M vertex-edge average)" << endl
+           << "E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)" << endl
+           << endl
+           << general_opt << "\n"
+           << "Example: ./at-u2-v0 -i ../Images/cerclesTriangle64b02.pgm -o tmp -a 0.05 -e 1 -1 0.1 -2 0.00001 -t 20"
+           << endl;
       return 1;
     }
   string f1 = vm[ "input" ].as<string>();
@@ -429,10 +480,13 @@ int main( int argc, char* argv[] )
   typedef DiscreteExteriorCalculus<2,2, EigenLinearAlgebraBackend> Calculus;
   typedef Calculus::PrimalForm0       PrimalForm0;
   typedef Calculus::PrimalForm1       PrimalForm1;
+  typedef Calculus::PrimalForm2       PrimalForm2;
   typedef Calculus::PrimalDerivative0 PrimalDerivative0;
   typedef Calculus::PrimalDerivative1 PrimalDerivative1;
+  typedef Calculus::PrimalDerivative2 PrimalDerivative2;
   typedef Calculus::DualDerivative0   DualDerivative0;
   typedef Calculus::DualDerivative1   DualDerivative1;
+  typedef Calculus::DualDerivative2   DualDerivative2;
   typedef Calculus::PrimalHodge0      PrimalHodge0;
   typedef Calculus::PrimalHodge1      PrimalHodge1;
   typedef Calculus::PrimalHodge2      PrimalHodge2;
@@ -441,13 +495,15 @@ int main( int argc, char* argv[] )
   typedef Calculus::DualHodge2        DualHodge2;
   typedef Calculus::PrimalIdentity0   PrimalIdentity0;
   typedef Calculus::PrimalIdentity1   PrimalIdentity1;
+  typedef Calculus::PrimalIdentity2   PrimalIdentity2;
   typedef Calculus::Index             Index;
   typedef Calculus::SCell             SCell;
   Domain domain = image.domain();
   Point  p0     = domain.lowerBound(); p0 *= 2;
   Point  p1     = domain.upperBound(); p1 *= 2;
-  Domain kdomain  ( p0, p1 );
-  GreyLevelImage  dbl_image( kdomain );
+         p1    += Point::diagonal(2);
+  Domain kdomain( p0, p1 );
+  Image dbl_image( kdomain );
   Calculus calculus;
   calculus.initKSpace( ConstAlias<Domain>( domain ) );
   const KSpace& K = calculus.myKSpace;
@@ -456,10 +512,17 @@ int main( int argc, char* argv[] )
     calculus.insertSCell( K.sCell( *it ) ); // ajoute toutes les cellules de Khalimsky.
   calculus.updateIndexes();
   trace.info() << calculus << endl;
-  vector<PrimalForm0> g;
-  g.push_back( PrimalForm0( calculus ) );
-  g.push_back( PrimalForm0( calculus ) );
-  g.push_back( PrimalForm0( calculus ) );
+//  Calculus::PrimalForm2 g( calculus );
+//  for ( Calculus::Index index = 0; index < g.myContainer.rows(); index++)
+//    {
+//      const Calculus::SCell& cell = g.getSCell( index );
+//      g.myContainer( index ) = ((double) image( K.sCoords( cell ) )) /
+//        255.0;
+//    }
+  vector<PrimalForm2> g;
+  g.push_back( PrimalForm2( calculus ) );
+  g.push_back( PrimalForm2( calculus ) );
+  g.push_back( PrimalForm2( calculus ) );
   for ( Index index = 0; index < g[ 0 ].myContainer.rows(); index++)
     {
       SCell cell = g[ 0 ].getSCell( index );
@@ -472,12 +535,17 @@ int main( int argc, char* argv[] )
 
   // u = g at the beginning
   trace.info() << "u" << endl;
-  vector<PrimalForm0> u( g );
+  vector<PrimalForm2> u( g );
   // v = 1 at the beginning
   trace.info() << "v" << endl;
-  PrimalForm1 v( calculus );
-  for ( Index index = 0; index < v.myContainer.rows(); index++)
-    v.myContainer( index ) = 1;
+  Calculus::PrimalForm0 v( calculus );
+  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+    v.myContainer( index ) = 1.0;
+  Calculus::PrimalForm0 former_v = v;
+  trace.info() << "v1 = 1" << endl;
+  Calculus::PrimalForm1 v1( calculus );
+  for ( Index index = 0; index < v1.myContainer.rows(); index++) 
+    v1.myContainer( index ) = 1.0;
   Index nb0   = u[ 0 ].myContainer.rows();
   Index nb1   = v.myContainer.rows();
 
@@ -500,44 +568,44 @@ int main( int argc, char* argv[] )
   const DualHodge1        dual_h1   = calculus.hodge<1,DUAL>();
   trace.info() << "dual_h2" << endl;
   const DualHodge2        dual_h2   = calculus.hodge<2,DUAL>();
+//  trace.endBlock();
+
+  // point_to_edge average operator
+  Calculus::PrimalDerivative0   M01 = calculus.derivative<0, PRIMAL>();
+  M01.myContainer = .5 * M01.myContainer.cwiseAbs();
+  // edge_to_face average operator
+  Calculus::PrimalDerivative1   M12 = calculus.derivative<1, PRIMAL>();
+  M12.myContainer = .25 * M12.myContainer.cwiseAbs(); 
+  const Calculus::PrimalAntiderivative2 primal_AD2 = dual_h1 * dual_D0 * primal_h2;
+
   trace.endBlock();
 
   const Calculus::PrimalIdentity0 Id0 = calculus.identity<0, PRIMAL>();
   const Calculus::PrimalIdentity1 Id1 = calculus.identity<1, PRIMAL>();
   const Calculus::PrimalIdentity2 Id2 = calculus.identity<2, PRIMAL>();
 
-  // Weight matrices
-  //  Calculus::DualIdentity2   G0 		= ( 1.0/(h*h) ) * calculus.identity<2, DUAL>();
-  Calculus::PrimalIdentity0 G0 	  = Id0; //	= ( 1.0/(h*h) ) * calculus.identity<0, PRIMAL>();
-  Calculus::PrimalIdentity0 invG0 = Id0; //   = 	(h*h) 	* calculus.identity<0, PRIMAL>();
-
-  //  Calculus::DualIdentity1   G1 		= calculus.identity<1, DUAL>();
-  Calculus::PrimalIdentity1 G1    = Id1; //	= calculus.identity<1, PRIMAL>();
-  Calculus::PrimalIdentity1 invG1 = Id1; //     = calculus.identity<1, PRIMAL>();
-
-  //  Calculus::DualIdentity0   G2 		= 		(h*h) 	* calculus.identity<0, DUAL>();
-  Calculus::PrimalIdentity2 G2    = Id2; //	= 		(h*h) 	* calculus.identity<2, PRIMAL>();
-  Calculus::PrimalIdentity2 invG2 = Id2; //     = ( 1.0/(h*h) ) * calculus.identity<2, PRIMAL>();
+  typedef Calculus::PrimalDerivative0::Container Matrix;
 
   // Building alpha_G0_1
-  const PrimalIdentity0 alpha_iG0   = a * Id0; 
-  vector<PrimalForm0> alpha_iG0_g;
-  alpha_iG0_g.push_back( alpha_iG0 * g[ 0 ] );
-  alpha_iG0_g.push_back( alpha_iG0 * g[ 1 ] );
-  alpha_iG0_g.push_back( alpha_iG0 * g[ 2 ] );
+//  const Calculus::PrimalIdentity2       alpha_Id2 = a * Id2;
+//  const Calculus::PrimalForm2           alpha_g   = a * g;
 
-  const PrimalIdentity1 lap_operator_v
-    = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
-               + dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
+  const PrimalIdentity2 alpha_Id2   = a * Id2;
+  vector<PrimalForm2> alpha_g;
+  alpha_g.push_back( alpha_Id2 * g[ 0 ] );
+  alpha_g.push_back( alpha_Id2 * g[ 1 ] );
+  alpha_g.push_back( alpha_Id2 * g[ 2 ] );
+
+  const Calculus::PrimalIdentity0  lap_operator_v = -1.0 * dual_h2 * dual_D1 * primal_h1 * primal_D0;
 
   // SparseLU is so much faster than SparseQR
   // SimplicialLLT is much faster than SparseLU
   // typedef EigenLinearAlgebraBackend::SolverSparseQR LinearAlgebraSolver;
   // typedef EigenLinearAlgebraBackend::SolverSparseLU LinearAlgebraSolver;
   typedef EigenLinearAlgebraBackend::SolverSimplicialLLT LinearAlgebraSolver;
-  typedef DiscreteExteriorCalculusSolver<Calculus, LinearAlgebraSolver, 0, PRIMAL, 0, PRIMAL> SolverU;
+  typedef DiscreteExteriorCalculusSolver<Calculus, LinearAlgebraSolver, 2, PRIMAL, 2, PRIMAL> SolverU;
   SolverU solver_u;
-  typedef DiscreteExteriorCalculusSolver<Calculus, LinearAlgebraSolver, 1, PRIMAL, 1, PRIMAL> SolverV;
+  typedef DiscreteExteriorCalculusSolver<Calculus, LinearAlgebraSolver, 0, PRIMAL, 0, PRIMAL> SolverV;
   SolverV solver_v;
 
   while ( l1 >= l2 )
@@ -545,10 +613,10 @@ int main( int argc, char* argv[] )
       trace.info() << "************ lambda = " << l1 << " **************" << endl;
       double l = l1;
       trace.info() << "B'B'" << endl;
-      const PrimalIdentity1 lBB = l * lap_operator_v;
-      PrimalForm1 l_1_over_4( calculus );
-      for ( Index index = 0; index < nb1; index++)
-        l_1_over_4.myContainer( index ) = l/4.0;
+      const PrimalIdentity0 l_LAPV = l * lap_operator_v;
+      PrimalForm0 l_1_over_4( calculus );
+      for ( Index index = 0; index < l_1_over_4.myContainer.rows(); index++)
+        l_1_over_4.myContainer( index ) = l / 4.0;
 
       double last_eps = e1;
       for ( double eps = e1; eps >= e2; eps /= er )
@@ -556,48 +624,54 @@ int main( int argc, char* argv[] )
           trace.info() << "---------------------------------------------------------------" << endl;
           trace.info() << "--------------- eps = " << eps << " --------------------" << endl;
           last_eps = eps;
-          PrimalIdentity1 BB          = eps * lBB + ( l/(4.0*eps) ) * Id1;
-          PrimalForm1     l_1_over_4e = (1.0/eps) * l_1_over_4;
+          PrimalIdentity0 Per_Op      =  eps * l_LAPV + ( l/(4.0*eps) ) * Id0;
+          PrimalForm0     l_1_over_4e = (1.0/eps) * l_1_over_4;
+
           int i = 0;
           for ( ; i < n; ++i )
             {
               trace.info() << "------ Iteration " << i << "/" << n << " ------" << endl;
-              trace.beginBlock("Solving for u");
-              trace.info() << "Building matrix M : = alpha_Id0 - tA_Diag(v)^2_A" << endl;
+              trace.beginBlock("Solving for u as a 2-form");
+              trace.info() << "E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)" << endl;
+              trace.info() << "dE/du  = 2( a Id (u-g) + B diag(M v)^2 B^t u )" << endl;
+              trace.info() << "Building matrix U =  [ a Id + B diag(M v)^2 B^t ]" << endl;
+              PrimalIdentity1 diag_v1 = diag( calculus, v1 );
+              PrimalIdentity2 M_Id2   = -1.0 * primal_D1 * diag_v1 * diag_v1 * primal_AD2
+                                        + alpha_Id2;
+              trace.info() << "Prefactoring matrix U" << endl;
+              solver_u.compute( M_Id2 );
 
-              PrimalIdentity1 diag_v = diag( calculus, v );
-              PrimalDerivative0 v_A  = diag_v * primal_D0;
-              PrimalIdentity0 Av2A   = square( calculus, v_A ) + alpha_iG0;
-              trace.info() << "Prefactoring matrix M" << endl;
-
-              // const Matrix& M = Av2A.myContainer;
-              // for (int k = 0; k < M.outerSize(); ++k)
-              //   for ( Matrix::InnerIterator it( M, k ); it; ++it )
-              //     trace.info() << "[" << it.row() << "," << it.col() << "] = " << it.value() << endl;
-              solver_u.compute( Av2A );
               for ( Dimension i = 0; i < 3; ++i )
                 {
-                  trace.info() << "Solving M u = alpha g" << endl;
-                  u[ i ] = solver_u.solve( alpha_iG0_g[ i ] );
-                  trace.info() << ( solver_u.isValid() ? "OK" : "ERROR" ) << " " << solver_u.myLinearAlgebraSolver.info() << endl;
+                    u[i] = solver_u.solve( alpha_g[i] );
+                    trace.info() << "  => " << ( solver_u.isValid() ? "OK" : "ERROR" )
+                                 << " " << solver_u.myLinearAlgebraSolver.info() << endl;
                 }
-              trace.info() << "-------------------------------------------------------------------------------" << endl;
               trace.endBlock();
 
-              const PrimalForm1 former_v = v;
+
+              // E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)
+              // dE/dv  = 2( M^t diag( B^t u )^2 M v  + l e A^t A v  - l/4e Id (1-v) )
+              //  dE/dv = 0 <=> [ M^t diag( B^t u )^2 M + l e A^t A  + l/4e Id ] v = l/4e 1
               trace.beginBlock("Solving for v");
-              trace.info() << "Building matrix N := l/4e Id1 + le (tA' A' + tB B) + sum Diag(Au_i)^2" << endl;
-              PrimalIdentity1 N = BB;
+              former_v = v;
+              trace.info() << "E(u,v) = a(u-g)^t (u-g) +  u^t B diag(M v)^2 B^t u + l e v^t A^t A v + l/(4e) (1-v)^t (1-v)" << endl;
+              trace.info() << " 2( M^t diag( B^t u )^2 M v  + l e A^t A v  - l/4e Id (1-v) )" << endl;
+              trace.info() << "Building matrix V = [ M^t diag( B^t u )^2 M + l e A^t A  + l/4e Id ]" << endl;
+              PrimalIdentity0 N_Id0 = Per_Op;
               for ( Dimension i = 0; i < 3; ++i )
                 {
-                  const PrimalIdentity1 A_u = diag( calculus, primal_D0 * u[ i ] );
-                  N.myContainer += square( calculus, A_u ).myContainer;
+                    const PrimalIdentity1 diag_Bt_u = diag( calculus, primal_AD2 * u[i] );
+                    N_Id0.myContainer += ( M01.transpose() * diag_Bt_u * diag_Bt_u * M01).myContainer;
                 }
-              trace.info() << "Prefactoring matrix N" << endl;
-              solver_v.compute( N );
-              trace.info() << "Solving N v = l/4e 1" << endl;
+              trace.info() << "Prefactoring matrix V" << endl;
+              solver_v.compute( N_Id0 );
+              trace.info() << "Solving V v = l/4e * 1" << endl;
               v = solver_v.solve( l_1_over_4e );
-              trace.info() << ( solver_v.isValid() ? "OK" : "ERROR" ) << " " << solver_v.myLinearAlgebraSolver.info() << endl;
+              trace.info() << "  => " << ( solver_v.isValid() ? "OK" : "ERROR" )
+                           << " " << solver_v.myLinearAlgebraSolver.info() << endl;
+              trace.info() << "Projecting v0 onto v1" << endl;
+              v1 = M01 * v;
               trace.endBlock();
 
               trace.beginBlock("Checking v, computing norms");
@@ -619,13 +693,13 @@ int main( int argc, char* argv[] )
               double n_infty = 0.0;
               double n_2 = 0.0;
               double n_1 = 0.0;
-
+                  
               for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
                 {
-                  n_infty = max( n_infty, fabs( v.myContainer( index ) - former_v.myContainer( index ) ) );
+                  n_infty = max( n_infty, abs( v.myContainer( index ) - former_v.myContainer( index ) ) );
                   n_2    += ( v.myContainer( index ) - former_v.myContainer( index ) )
-                            * ( v.myContainer( index ) - former_v.myContainer( index ) );
-                  n_1    += fabs( v.myContainer( index ) - former_v.myContainer( index ) );
+                    * ( v.myContainer( index ) - former_v.myContainer( index ) );
+                  n_1    += abs( v.myContainer( index ) - former_v.myContainer( index ) );
                 }
               n_1 /= v.myContainer.rows();
               n_2 = sqrt( n_2 / v.myContainer.rows() );
@@ -637,60 +711,60 @@ int main( int argc, char* argv[] )
               if ( n_infty < 1e-4 ) break;
             }
         }
-
+  
       // affichage des energies ********************************************************************
 
       trace.beginBlock("Computing energies");
 
-      // a(u-g)^2
-      Calculus::PrimalIdentity0 diag_alpha = a * Id0;
-      double alpha_square_u_minus_g = 0.0;
-      for ( Dimension i = 0; i < 3; ++i )
-        {
-          const PrimalForm0 u_minus_g = u[ i ] - g[ i ];
-          alpha_square_u_minus_g += innerProduct( calculus, diag_alpha * u_minus_g, u_minus_g );
-        }
-      trace.info() << "- a(u-g)^2   = " << alpha_square_u_minus_g << std::endl;
+       // a(u-g)^2
+       Calculus::PrimalIdentity2 diag_alpha = a * Id2;
+       double alpha_square_u_minus_g = 0.0;
+       for ( Dimension i = 0; i < 3; ++i )
+         {
+           const PrimalForm2 u_minus_g = u[ i ] - g[ i ];
+           alpha_square_u_minus_g += innerProduct( calculus, diag_alpha * u_minus_g, u_minus_g );
+         }
+       trace.info() << "- a(u-g)^2      = " << alpha_square_u_minus_g << std::endl;
 
-      // v^2|grad u|^2
-      const Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
-      double square_v_grad_u = 0.0;
-      for ( Dimension i = 0; i < 3; ++i )
-        {      
-          const Calculus::PrimalForm1 v_A_u = diag_v * primal_D0 * u[ i ];
-          square_v_grad_u += innerProduct( calculus, v_A_u, v_A_u );
-        }
-      trace.info() << "- v^2|grad u|^2 = " << square_v_grad_u << std::endl;
+       // v^2|grad u|^2
+       const Calculus::PrimalIdentity1 diag_v1 = diag( calculus, v1 );
+       double square_v1_grad_u = 0.0;
+       for ( Dimension i = 0; i < 3; ++i )
+         {
+           const Calculus::PrimalForm1 v1_A_u = diag_v1 * primal_AD2 * u[ i ];
+           square_v1_grad_u += innerProduct( calculus, v1_A_u, v1_A_u );
+         }
+       trace.info() << "- v^2|grad u|^2 = " << square_v1_grad_u << std::endl;
 
-      // le|grad v|^2
-      Calculus::PrimalForm1 v_prime = lap_operator_v * v;
-      double le_square_grad_v = l * last_eps * innerProduct( calculus, v, v_prime );
-      trace.info() << "- le|grad v|^2  = " << le_square_grad_v << std::endl;
-      
-      // l(1-v)^2/4e
-      Calculus::PrimalForm1 one_minus_v = v;
-      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
-        one_minus_v.myContainer( index_i ) = 1.0 - one_minus_v.myContainer( index_i );
-      double l_over_4e_square_1_minus_v
-        = l / (4*last_eps) * innerProduct( calculus, one_minus_v, one_minus_v );
-      trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
+       // le|grad v|^2
+       Calculus::PrimalForm0 v_prime = lap_operator_v * v;
+       double le_square_grad_v = l * last_eps * innerProduct( calculus, v, v_prime );
+       trace.info() << "- le|grad v|^2  = " << le_square_grad_v << std::endl;
 
-      // l.per
-      double Lper = 2.0* l_over_4e_square_1_minus_v; //le_square_grad_v + l_over_4e_square_1_minus_v;
-      trace.info() << "- l.per         = " << Lper << std::endl;
+       // l(1-v)^2/4e
+       Calculus::PrimalForm0 one_minus_v = v;
+       for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
+         one_minus_v.myContainer( index_i ) = 1.0 - one_minus_v.myContainer( index_i );
+       double l_over_4e_square_1_minus_v
+         = l / (4.0*last_eps) * innerProduct( calculus, one_minus_v, one_minus_v );
+       trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
 
-      // AT tot
-      double ATtot = alpha_square_u_minus_g + square_v_grad_u + Lper;
+       // l.per
+       double Lper = le_square_grad_v + l_over_4e_square_1_minus_v;
+       trace.info() << "- l.per         = " << Lper << std::endl;
+
+       // AT tot
+       double ATtot = alpha_square_u_minus_g + square_v1_grad_u + Lper;
 
 
-      // f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;
-      f << tronc(l,8) << "\t" << a << "\t"  << tronc(last_eps,4)
-        << "\t" << tronc(alpha_square_u_minus_g,5)
-        << "\t" << tronc(square_v_grad_u,5)
-        << "\t" << tronc(le_square_grad_v,5)
-        << "\t" << tronc(l_over_4e_square_1_minus_v,5)
-        << "\t" << tronc(Lper,5)
-        << "\t" << tronc(ATtot,5) << endl;
+       // f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;
+       f << tronc(l,8) << "\t" << a << "\t"  << tronc(last_eps,4)
+         << "\t" << tronc(alpha_square_u_minus_g,5)
+         << "\t" << tronc(square_v1_grad_u,5)
+         << "\t" << tronc(le_square_grad_v,5)
+         << "\t" << tronc(l_over_4e_square_1_minus_v,5)
+         << "\t" << tronc(Lper,5)
+         << "\t" << tronc(ATtot,5) << endl;
 
       trace.endBlock();
 
@@ -700,24 +774,29 @@ int main( int argc, char* argv[] )
       int dec_l = (int) (floor((l-floor(l))*10000000));
 
       ostringstream ossU;
-      ossU << boost::format("%s-l%.7f-u.ppm") %f2 %l;
+      ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
       string str_image_u = ossU.str();
-      savePrimalForms0ToPPMImage( calculus, end_image, u[ 0 ], u[ 1 ], u[ 2 ], str_image_u);
+      savePrimalForms2ToPPMImage( calculus, end_image, u[ 0 ], u[ 1 ], u[ 2 ], str_image_u);
 
-      ostringstream ossV;
-      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
-      string str_image_v = ossV.str();
-      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
+      // ostringstream ossV;
+      // ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+      // string str_image_v = ossV.str();
+      // savePrimalForm0ToImage( calculus, end_image, v, str_image_v);
 
-      ostringstream ossU0V1;
-      ossU0V1 << boost::format("%s-l%.7f-u0-v1.eps") %f2 %l;
-      string str_image_u0_v1 = ossU0V1.str();
-      saveFormsToEps( calculus, u[ 0 ], u[ 1 ], u[ 2 ], v, str_image_u0_v1 );
+      ostringstream ossV1;
+      ossV1 << boost::format("%s-l%.7f-v1.pgm") %f2 %l;
+      string str_image_v1 = ossV1.str();
+      savePrimalForm1ToImage( calculus, dbl_image, v1, str_image_v1 );
 
-      ostringstream ossGV1;
-      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
-      string str_image_g_v1 = ossGV1.str();
-      saveFormsToEps( calculus, g[ 0 ], g[ 1 ], g[ 2 ], v, str_image_g_v1 );
+      ostringstream ossU2V0;
+      ossU2V0 << boost::format("%s-l%.7f-u2-v0.eps") %f2 %l;
+      string str_image_u2_v0 = ossU2V0.str();
+      saveFormsToEps( calculus, u[ 0 ], u[ 1 ], u[ 2 ], v, str_image_u2_v0 );
+
+      ostringstream ossGV0;
+      ossGV0 << boost::format("%s-l%.7f-g-v0.eps") %f2 %l;
+      string str_image_g_v0 = ossGV0.str();
+      saveFormsToEps( calculus, g[ 0 ], g[ 1 ], g[ 2 ], v, str_image_g_v0 );
 
       l1 /= lr;
     }
