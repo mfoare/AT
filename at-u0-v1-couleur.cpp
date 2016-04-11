@@ -31,7 +31,7 @@
 #include "VTKWriter.h"
 
 // StructureTensor
-#include "structureTensor.h"
+//#include "structureTensor.h"
 
 
 using namespace std;
@@ -174,7 +174,7 @@ void displayForms( Board& aBoard, const Calculus& calculus,
   //PrimalForms0ToColorImage( calculus, ur, ug, ub, image_u );
   typename Image::Value min = 0;
   typename Image::Value max = 255;
-  DGtal::GrayscaleColorMap<float> colormap( 0.0, 1.0 );
+  //DGtal::GrayscaleColorMap<float> colormap( 0.0, 1.0 );
   // DGtal::Display2DFactory::drawImage< DGtal::GrayscaleColorMap<float>, Image>( aBoard, image_u, min, max );
   // aBoard << image_u;
   aBoard.setLineWidth( 0.0 );
@@ -185,8 +185,6 @@ void displayForms( Board& aBoard, const Calculus& calculus,
 //      float red   = ur.myContainer( idx );
 //      float green = ug.myContainer( idx );
 //      float blue  = ub.myContainer( idx );
-      //Color c   = colormap( std::max( 0.0f, std::min( 1.0f, val ) ) );
-
       int red   = (int) round( ur.myContainer[ idx ] * 255.0 );
       red       = std::max( 0 , std::min( 255, red ) );
       int green = (int) round( ug.myContainer[ idx ] * 255.0 );
@@ -194,6 +192,7 @@ void displayForms( Board& aBoard, const Calculus& calculus,
       int blue  = (int) round( ub.myContainer[ idx ] * 255.0 );
       blue      = std::max( 0 , std::min( 255, blue ) );
 
+//      Color c   = colormap( std::max( 0.0f, std::min( 1.0f, val ) ) );
       Color c( red , green , blue );
       aBoard.setPenColor( c );
       aBoard.setFillColor( c );
@@ -231,7 +230,6 @@ void saveFormsToEps( const Calculus& calculus,
     displayForms( aBoard, calculus, ur, ug, ub, v );
     aBoard.saveEPS( filename.c_str() );
 }
-
 
 double tronc( const double& nb, const int& p )
 {
@@ -592,7 +590,7 @@ int main( int argc, char* argv[] )
               PrimalIdentity1 N = BB;
               for ( Dimension i = 0; i < 3; ++i )
                 {
-                  const Calculus::PrimalIdentity1 A_u = diag( calculus, primal_D0 * u[ i ] );
+                  const PrimalIdentity1 A_u = diag( calculus, primal_D0 * u[ i ] );
                   N.myContainer += square( calculus, A_u ).myContainer;
                 }
               trace.info() << "Prefactoring matrix N" << endl;
@@ -653,8 +651,8 @@ int main( int argc, char* argv[] )
           alpha_square_u_minus_g += innerProduct( calculus, diag_alpha * u_minus_g, u_minus_g );
         }
       trace.info() << "- a(u-g)^2   = " << alpha_square_u_minus_g << std::endl;
-      // v^2|grad u|^2
 
+      // v^2|grad u|^2
       const Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
       double square_v_grad_u = 0.0;
       for ( Dimension i = 0; i < 3; ++i )
@@ -716,10 +714,10 @@ int main( int argc, char* argv[] )
       string str_image_u0_v1 = ossU0V1.str();
       saveFormsToEps( calculus, u[ 0 ], u[ 1 ], u[ 2 ], v, str_image_u0_v1 );
 
-//      ostringstream ossGV1;
-//      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
-//      string str_image_g_v1 = ossGV1.str();
-//      saveFormsToEps( calculus, g[ 0 ], g[ 1 ], g[ 2 ], v, str_image_g_v1 );
+      ostringstream ossGV1;
+      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
+      string str_image_g_v1 = ossGV1.str();
+      saveFormsToEps( calculus, g[ 0 ], g[ 1 ], g[ 2 ], v, str_image_g_v1 );
 
       l1 /= lr;
     }
