@@ -294,12 +294,15 @@ int main( int argc, char* argv[] )
   general_opt.add_options()
     ("help,h", "display this message")
     ("input,i", po::value<string>(), "the input image filename." )
+    ("original,d", po::value<string>(), "the original image filename." )
     ("output,o", po::value<string>()->default_value( "AT" ), "the output image basename." )
     ("lambda,l", po::value<double>(), "the parameter lambda." )
     ("lambda-1,1", po::value<double>()->default_value( 0.3125 ), "the initial parameter lambda (l1)." ) // 0.3125
     ("lambda-2,2", po::value<double>()->default_value( 0.00005 ), "the final parameter lambda (l2)." )
-    ("lambda-ratio,q", po::value<double>()->default_value( sqrt(2) ), "the division ratio for lambda from l1 to l2." )
-    ("alpha,a", po::value<double>()->default_value( 1.0 ), "the parameter alpha." )
+    ("lambda-ratio,q", po::value<double>()->default_value( sqrt(2.0) ), "the division ratio for lambda from l1 to l2." )
+    ("alpha-1", po::value<double>()->default_value( 1.0 ), "the parameter alpha." )
+    ("alpha-2", po::value<double>()->default_value( 0.001 ), "the parameter alpha." )
+    ("alpha-ratio", po::value<double>()->default_value( sqrt(2.0) ), "the parameter alpha." )
     ("epsilon,e", po::value<double>()->default_value( 1.0 ), "the initial and final parameter epsilon of AT functional at the same time." )
     ("epsilon-1", po::value<double>(), "the initial parameter epsilon." )
     ("epsilon-2", po::value<double>(), "the final parameter epsilon." )
@@ -340,6 +343,7 @@ int main( int argc, char* argv[] )
       return 1;
     }
   string f1 = vm[ "input" ].as<string>();
+  string fd = vm[ "original" ].as<string>();
   string f2 = vm[ "output" ].as<string>();
   double l1  = vm[ "lambda-1" ].as<double>();
   double l2  = vm[ "lambda-2" ].as<double>();
@@ -347,7 +351,9 @@ int main( int argc, char* argv[] )
   if ( vm.count( "lambda" ) ) l1 = l2 = vm[ "lambda" ].as<double>();
   if ( l2 > l1 ) l2 = l1;
   if ( lr <= 1.0 ) lr = sqrt(2);
-  double a  = vm[ "alpha" ].as<double>();
+  double a1 = vm[ "alpha-1" ].as<double>();
+  double a2 = vm[ "alpha-2" ].as<double>();
+  double ar = vm[ "alpha-ratio" ].as<double>();
   double e  = vm[ "epsilon" ].as<double>();
   double e1 = vm.count( "epsilon-1" ) ? vm[ "epsilon-1" ].as<double>() : e;
   double e2 = vm.count( "epsilon-2" ) ? vm[ "epsilon-2" ].as<double>() : e;
@@ -362,13 +368,14 @@ int main( int argc, char* argv[] )
 
   trace.beginBlock("Reading image");
   Image image = GenericReader<Image>::import( f1 );
+  Image perfect_image = GenericReader<Image>::import( fd );
   Image end_image = image;
   trace.endBlock();
 
   // opening file
   const string file = f2 + ".txt";
   ofstream f(file.c_str());
-  f << "#  l \t" << " a \t" << " e \t" << "a(u-g)^2 \t" << "v^2|grad u|^2 \t" << "  le|grad v|^2 \t" << "  l(1-v)^2/4e \t" << " l.per \t" << "AT tot"<< endl;
+
 
   trace.beginBlock("Creating calculus");
   typedef DiscreteExteriorCalculus<2,2, EigenLinearAlgebraBackend> Calculus;
@@ -396,6 +403,18 @@ int main( int argc, char* argv[] )
       max_g = std::max( max_g , g.myContainer( index ) );
     }
   trace.info() << "min_g= " << min_g << " max_g= " << max_g << std::endl;
+
+
+  Calculus::PrimalForm0 perfect_g( calculus );
+  double min_perfect_g = 300.0, max_perfect_g = 0.0;
+  for ( Calculus::Index index = 0; index < perfect_g.myContainer.rows(); index++)
+    {
+      const Calculus::SCell& cell = perfect_g.getSCell( index );
+      perfect_g.myContainer( index ) = ((double) perfect_image( K.sCoords( cell ) )) /
+    255.0;
+      min_perfect_g = std::min( min_perfect_g , perfect_g.myContainer( index ) );
+      max_perfect_g = std::max( max_perfect_g , perfect_g.myContainer( index ) );
+    }
   trace.endBlock();
 
   // u = g at the beginning
@@ -429,17 +448,6 @@ int main( int argc, char* argv[] )
 
   const DGtal::Dimension dimX = 0, dimY = 1;
 
-  // BEG JOL
-  // Calculus::PrimalIdentity1 tSS = calculus.identity<1, PRIMAL>();
-  // for ( Calculus::Index index_i = 0; index_i < tSS.myContainer.rows(); index_i++ )
-  //   for ( Calculus::Index index_j = 0; index_j < tSS.myContainer.cols(); index_j++ )
-  //     {
-  //       tSS.myContainer.coeffRef( index_i, index_j ) = 0.0;
-  //       for ( Calculus::Index index_k = 0; index_k < tSS.myContainer.rows(); index_k++ )
-  //           tSS.myContainer.coeffRef( index_i, index_j ) +=  sharp_x.myContainer.coeffRef( index_k, index_i ) * sharp_x.myContainer.coeffRef( index_k, index_j )
-  //                                                          + sharp_y.myContainer.coeffRef( index_k, index_i ) * sharp_y.myContainer.coeffRef( index_k, index_j ) ;
-  //     }
-  // END JOL
   trace.endBlock();
 
 
@@ -460,26 +468,6 @@ int main( int argc, char* argv[] )
   Calculus::PrimalIdentity2 G2    = Id2; //	= 		(h*h) 	* calculus.identity<2, PRIMAL>();
   Calculus::PrimalIdentity2 invG2 = Id2; //     = ( 1.0/(h*h) ) * calculus.identity<2, PRIMAL>();
 
-  // Building alpha_G0_1
-  const Calculus::PrimalIdentity0 alpha_iG0 = a * Id0; // a * calculus.identity<0, PRIMAL>(); // a * invG0; //diag_alpha;
-  const Calculus::PrimalForm0 alpha_iG0_g   = alpha_iG0 * g;
-
-  // Builds a Laplacian but at distance 2 !
-  // const Matrix& M = tA_tS_S_A.myContainer;
-  // for (int k = 0; k < M.outerSize(); ++k)
-  //   {
-  //     trace.info() << "-----------------------------------------------------------------------" << endl;
-  //     for ( Matrix::InnerIterator it( M, k ); it; ++it )
-  //       trace.info() << "[" << it.row() << "," << it.col() << "] = " << it.value() << endl;
-  //   }
-
-
-  // Building iG1_A_G0_tA_iG1 + tB_iG2_B
-//  // A.tA
-//  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1 );
-//  // tB.B
-//  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
-  // tB.B + A.tA
   const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
                                                             + dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
 
@@ -493,16 +481,26 @@ int main( int argc, char* argv[] )
   typedef DiscreteExteriorCalculusSolver<Calculus, LinearAlgebraSolver, 1, PRIMAL, 1, PRIMAL> SolverV;
   SolverV solver_v;
 
-  while ( l1 >= l2 )
+
+  for ( double a = a1; a >= a2; a /= ar )
     {
-      trace.info() << "************ lambda = " << l1 << " **************" << endl;
-      double l = l1;
+    //f << tronc(a,5);
+    // Building alpha_G0_1
+    const Calculus::PrimalIdentity0 alpha_iG0 = a * Id0; // a * calculus.identity<0, PRIMAL>(); // a * invG0; //diag_alpha;
+    const Calculus::PrimalForm0 alpha_iG0_g   = alpha_iG0 * g;
+
+    for ( double l = l1; l >= l2; l /= lr )
+    //while ( l1 >= l2 )
+    {
+      trace.info() << "************ lambda = " << l << " **************" << endl;
+      //double l = l1;
       trace.info() << "B'B'" << endl;
       const Calculus::PrimalIdentity1 lBB = l * lap_operator_v;
       Calculus::PrimalForm1 l_sur_4( calculus );
       for ( Calculus::Index index = 0; index < l_sur_4.myContainer.rows(); index++)
         l_sur_4.myContainer( index ) = l/4.0;
       l_sur_4 = Id1 * l_sur_4; //tS_S * l_sur_4; //
+
       double last_eps = e1;
       for ( double eps = e1; eps >= e2; eps /= er )
         {
@@ -584,55 +582,54 @@ int main( int argc, char* argv[] )
 
       trace.beginBlock("Computing energies");
 
-      // a(u-g)^2
-      Calculus::PrimalIdentity0 diag_alpha = a * Id0;
-      const Calculus::PrimalForm0 u_minus_g = u - g;
-      double alpha_square_u_minus_g = innerProduct( calculus, diag_alpha * u_minus_g, u_minus_g );
-      trace.info() << "- a(u-g)^2   = " << alpha_square_u_minus_g << std::endl;
-      // v^2|grad u|^2
+//      // a(u-g)^2
+//      Calculus::PrimalIdentity0 diag_alpha = a * Id0;
+//      const Calculus::PrimalForm0 u_minus_g = u - g;
+//      double alpha_square_u_minus_g = innerProduct( calculus, diag_alpha * u_minus_g, u_minus_g );
+//      trace.info() << "- a(u-g)^2   = " << alpha_square_u_minus_g << std::endl;
+//
+//      // v^2|grad u|^2
+//      const Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
+//      const Calculus::PrimalForm1 v_A_u = diag_v * primal_D0 * u;
+//      double square_v_grad_u = innerProduct( calculus, v_A_u, v_A_u );
+//      trace.info() << "- v^2|grad u|^2 = " << square_v_grad_u << std::endl;
+////      // JOL: 1000 * plus rapide !
+////      trace.info() << "  - u^t N u" << std::endl;
+////      Calculus::PrimalForm0 u_prime = Av2A * u;
+////      for ( Calculus::Index index = 0; index < u.myContainer.rows(); index++)
+////        V2gradU2 += u.myContainer( index ) * u_prime.myContainer( index );
+////      // for ( Calculus::Index index_i = 0; index_i < u.myContainer.rows(); index_i++)
+////      // 	for ( Calculus::Index index_j = 0; index_j < u.myContainer.rows(); index_j++)
+////      //     V2gradU2 += u.myContainer( index_i ) * Av2A.myContainer.coeff( index_i,index_j ) * u.myContainer( index_j ) ;
 
-      const Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
-      const Calculus::PrimalForm1 v_A_u = diag_v * primal_D0 * u;
-      double square_v_grad_u = innerProduct( calculus, v_A_u, v_A_u );
-      trace.info() << "- v^2|grad u|^2 = " << square_v_grad_u << std::endl;
-//      // JOL: 1000 * plus rapide !
-//      trace.info() << "  - u^t N u" << std::endl;
-//      Calculus::PrimalForm0 u_prime = Av2A * u;
-//      for ( Calculus::Index index = 0; index < u.myContainer.rows(); index++)
-//        V2gradU2 += u.myContainer( index ) * u_prime.myContainer( index );
-//      // for ( Calculus::Index index_i = 0; index_i < u.myContainer.rows(); index_i++)
-//      // 	for ( Calculus::Index index_j = 0; index_j < u.myContainer.rows(); index_j++)
-//      //     V2gradU2 += u.myContainer( index_i ) * Av2A.myContainer.coeff( index_i,index_j ) * u.myContainer( index_j ) ;
+////      // le|grad v|^2
+//      Calculus::PrimalForm1 v_prime = lap_operator_v * v;
+//      double le_square_grad_v = l * last_eps * innerProduct( calculus, v, v_prime );
+//      trace.info() << "- le|grad v|^2  = " << le_square_grad_v << std::endl;
 
-//      // le|grad v|^2
-      Calculus::PrimalForm1 v_prime = lap_operator_v * v;
-      double le_square_grad_v = l * last_eps * innerProduct( calculus, v, v_prime );
-      trace.info() << "- le|grad v|^2  = " << le_square_grad_v << std::endl;
+//      // l(1-v)^2/4e
+//      Calculus::PrimalForm1 one_minus_v = v;
+//      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
+//        one_minus_v.myContainer( index_i ) = 1.0 - one_minus_v.myContainer( index_i );
+//      double l_over_4e_square_1_minus_v
+//        = l / (4*last_eps) * innerProduct( calculus, one_minus_v, one_minus_v );
+//      trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
 
-      // l(1-v)^2/4e
-      Calculus::PrimalForm1 one_minus_v = v;
-      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
-        one_minus_v.myContainer( index_i ) = 1.0 - one_minus_v.myContainer( index_i );
-      double l_over_4e_square_1_minus_v
-        = l / (4*last_eps) * innerProduct( calculus, one_minus_v, one_minus_v );
-      trace.info() << "- l(1-v)^2/4e   = " << l_over_4e_square_1_minus_v << std::endl;
+//      // l.per
+//      double Lper = 2.0* l_over_4e_square_1_minus_v; //le_square_grad_v + l_over_4e_square_1_minus_v;
+//      trace.info() << "- l.per         = " << Lper << std::endl;
 
-      // l.per
-      double Lper = 2.0* l_over_4e_square_1_minus_v; //le_square_grad_v + l_over_4e_square_1_minus_v;
-      trace.info() << "- l.per         = " << Lper << std::endl;
+//      // AT tot
+//      double ATtot = alpha_square_u_minus_g + square_v_grad_u + Lper;
 
-      // AT tot
-      double ATtot = alpha_square_u_minus_g + square_v_grad_u + Lper;
+      // (u-perfect_g)^2
+      const Calculus::PrimalForm0 u_minus_perfect_g = u - perfect_g;
+      double u_minus_perfect_g_square = innerProduct( calculus, u_minus_perfect_g, u_minus_perfect_g );
 
-
-      // f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;
-      f << tronc(l,8) << "\t" << a << "\t"  << tronc(last_eps,4)
-        << "\t" << tronc(alpha_square_u_minus_g,5)
-        << "\t" << tronc(square_v_grad_u,5)
-        << "\t" << tronc(le_square_grad_v,5)
-        << "\t" << tronc(l_over_4e_square_1_minus_v,5)
-        << "\t" << tronc(Lper,5)
-        << "\t" << tronc(ATtot,5) << endl;
+       f << a
+         << "\t" << l
+         << "\t" << tronc(u_minus_perfect_g_square,5) //tronc(alpha_square_u_minus_g,5);
+         << endl;
 
       trace.endBlock();
 
@@ -641,29 +638,29 @@ int main( int argc, char* argv[] )
       int int_l = (int) floor(l);
       int dec_l = (int) (floor((l-floor(l))*10000000));
 
-      ostringstream ossU;
-      ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
-      string str_image_u = ossU.str();
-      savePrimalForm0ToImage( calculus, end_image, u, str_image_u);
+//      ostringstream ossU;
+//      ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
+//      string str_image_u = ossU.str();
+//      savePrimalForm0ToImage( calculus, end_image, u, str_image_u);
 
-      ostringstream ossV;
-      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
-      string str_image_v = ossV.str();
-      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
+//      ostringstream ossV;
+//      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+//      string str_image_v = ossV.str();
+//      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
 
       ostringstream ossU0V1;
-      ossU0V1 << boost::format("%s-l%.7f-u0-v1.eps") %f2 %l;
+      ossU0V1 << boost::format("%s-l%.7f-a%.7f-u0-v1.eps") %f2 %l %a;
       string str_image_u0_v1 = ossU0V1.str();
       saveFormsToEps( calculus, u, v, str_image_u0_v1 );
 
-      ostringstream ossGV1;
-      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
-      string str_image_g_v1 = ossGV1.str();
-      saveFormsToEps( calculus, g, v, str_image_g_v1 );
-
-      l1 /= lr;
+//      ostringstream ossGV1;
+//      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
+//      string str_image_g_v1 = ossGV1.str();
+//      saveFormsToEps( calculus, g, v, str_image_g_v1 );
     }
 
+    //f << endl;
+    }
 
   f.close();
 

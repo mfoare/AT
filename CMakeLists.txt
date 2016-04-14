@@ -36,6 +36,15 @@ target_link_libraries (at-u2-v0-couleur ${DGTAL_LIBRARIES} ${CurvatureLibDepende
 target_link_libraries (at-u0-v1         ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 target_link_libraries (at-u0-v1-couleur ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
 
+ADD_EXECUTABLE(at-u2-v0-snr at-u2-v0-snr)
+ADD_EXECUTABLE(at-u2-v0-couleur-snr	at-u2-v0-couleur-snr)
+ADD_EXECUTABLE(at-u0-v1-snr  at-u0-v1-snr)
+ADD_EXECUTABLE(at-u0-v1-couleur-snr	at-u0-v1-couleur-snr)
+target_link_libraries (at-u2-v0-snr         ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
+target_link_libraries (at-u2-v0-couleur-snr ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
+target_link_libraries (at-u0-v1-snr         ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
+target_link_libraries (at-u0-v1-couleur-snr ${DGTAL_LIBRARIES} ${CurvatureLibDependencies}  -lfftw3 -lm )
+
 #ADD_EXECUTABLE(at-sansTenseur-0p-1p at-sansTenseur-0p-1p)
 #ADD_EXECUTABLE(at-tenseur-0p-1p 		at-tenseur-0p-1p)
 #ADD_EXECUTABLE(at-0p-1p 						at-0p-1p)
