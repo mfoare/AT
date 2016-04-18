@@ -8,24 +8,6 @@ EXEC='at-'$PROG'-snr'
 
 (cd build && make $EXEC)
 
-DATA='triple-spirale'
-IM='triple-spirale-b01'
-REP=$FILE'/'$IM
-mkdir $REP
-./build/$EXEC -i ./Images/$IM.pgm -d ./Images/$DATA.pgm -o $REP'/tsb1'  --alpha-1 1 --alpha-2 0.01 --alpha-ratio 1.2 --lambda-1 0.01 --lambda-2 0.0001 --lambda-ratio 1.2 --epsilon-1 1 --epsilon-2 0.25
-IM='triple-spirale-b02'
-REP=$FILE'/'$IM
-mkdir $REP
-./build/$EXEC -i ./Images/$IM.pgm -d ./Images/$DATA.pgm -o $REP'/tsb2'  --alpha-1 1 --alpha-2 0.01 --alpha-ratio 1.2 --lambda-1 0.01 --lambda-2 0.0001 --lambda-ratio 1.2 --epsilon-1 1 --epsilon-2 0.25
-IM='triple-spirale-b04'
-REP=$FILE'/'$IM
-mkdir $REP
-./build/$EXEC -i ./Images/$IM.pgm -d ./Images/$DATA.pgm -o $REP'/tsb4'  --alpha-1 1 --alpha-2 0.01 --alpha-ratio 1.2 --lambda-1 0.01 --lambda-2 0.0001 --lambda-ratio 1.2 --epsilon-1 1 --epsilon-2 0.25
-IM='triple-spirale-b08'
-REP=$FILE'/'$IM
-mkdir $REP
-./build/$EXEC -i ./Images/$IM.pgm -d ./Images/$DATA.pgm -o $REP'/tsb8'  --alpha-1 1 --alpha-2 0.01 --alpha-ratio 1.2 --lambda-1 0.01 --lambda-2 0.0001 --lambda-ratio 1.2 --epsilon-1 1 --epsilon-2 0.25
-
 
 DATA='barbara-cropped'
 IM='barbara-cropped-b01'
