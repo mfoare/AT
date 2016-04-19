@@ -211,8 +211,8 @@ void displayForms( Board& aBoard, const Calculus& calculus,
       Cell cell = K.uCell(p);
       //Cell   cell = K.unsigns( v.getSCell( idx ) );
       float val = v.myContainer( idx );
-      //aBoard << CustomStyle( cell.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
-      aBoard << CustomStyle( cell.className(), new CustomColors( Color( 0, 0, 0 ), Color( 0, 0, 0 ) ) );
+      aBoard << CustomStyle( cell.className(), new CustomColors( Color( 220, 0, 0 ), Color( 255, 0, 0 ) ) );
+      //aBoard << CustomStyle( cell.className(), new CustomColors( Color( 0, 0, 0 ), Color( 0, 0, 0 ) ) );
       if ( val <= 0.5 ) aBoard << cell;
     }
 

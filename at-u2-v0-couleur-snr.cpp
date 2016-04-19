@@ -803,10 +803,10 @@ int main( int argc, char* argv[] )
       int int_l = (int) floor(l);
       int dec_l = (int) (floor((l-floor(l))*10000000));
 
-//      ostringstream ossU;
-//      ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
-//      string str_image_u = ossU.str();
-//      savePrimalForms2ToPPMImage( calculus, end_image, u[ 0 ], u[ 1 ], u[ 2 ], str_image_u);
+      ostringstream ossU;
+      ossU << boost::format("%s-l%.7f-a%.7f-u.ppm") %f2 %l %a;
+      string str_image_u = ossU.str();
+      savePrimalForms2ToPPMImage( calculus, end_image, u[ 0 ], u[ 1 ], u[ 2 ], str_image_u);
 
 //      // ostringstream ossV;
 //      // ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
