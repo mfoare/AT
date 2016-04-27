@@ -28,7 +28,7 @@ E1=${12}
 E2=${13}
 
 
-(cd build && make $EXEC)
+#(cd build && make $EXEC)
 
 len=${#BRUIT[*]}
 for I in $( seq 1 1 $(($len-1)) )
