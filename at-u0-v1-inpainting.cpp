@@ -679,10 +679,18 @@ int main( int argc, char* argv[] )
       string str_image_u0_v1 = ossU0V1.str();
       saveFormsToEps( calculus, u, v, str_image_u0_v1 );
 
-      //      ostringstream ossGV1;
-      //      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
-      //      string str_image_g_v1 = ossGV1.str();
-      //      saveFormsToEps( calculus, g, v, str_image_g_v1 );
+      ostringstream ossUminusG;
+      Calculus::PrimalForm0 abs_u_minus_g = u_minus_g;
+      for ( Calculus::Index index = 0; index < abs_u_minus_g.myContainer.rows(); index++)
+          abs_u_minus_g.myContainer( index ) < 0 ? abs_u_minus_g.myContainer( index ) *= -1.0 : abs_u_minus_g.myContainer( index ) *= 1.0;
+      ossUminusG << boost::format("%s-l%.7f-diff.pgm") %f2 %l;
+      string str_image_u_minus_g = ossUminusG.str();
+      savePrimalForm0ToImage( calculus, end_image, abs_u_minus_g, str_image_u_minus_g);
+
+//      ostringstream ossGV1;
+//      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
+//      string str_image_g_v1 = ossGV1.str();
+//      saveFormsToEps( calculus, g, v, str_image_g_v1 );
 
 
       l1 /= lr;
