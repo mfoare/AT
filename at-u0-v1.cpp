@@ -294,12 +294,14 @@ int main( int argc, char* argv[] )
   general_opt.add_options()
     ("help,h", "display this message")
     ("input,i", po::value<string>(), "the input image filename." )
+    ("mask,m", po::value<string>(), "the input mask filename." )
     ("output,o", po::value<string>()->default_value( "AT" ), "the output image basename." )
     ("lambda,l", po::value<double>(), "the parameter lambda." )
     ("lambda-1,1", po::value<double>()->default_value( 0.3125 ), "the initial parameter lambda (l1)." ) // 0.3125
     ("lambda-2,2", po::value<double>()->default_value( 0.00005 ), "the final parameter lambda (l2)." )
     ("lambda-ratio,q", po::value<double>()->default_value( sqrt(2) ), "the division ratio for lambda from l1 to l2." )
     ("alpha,a", po::value<double>()->default_value( 1.0 ), "the parameter alpha." )
+    ("beta,b", po::value<double>()->default_value( 1.0 ), "the parameter beta." )
     ("epsilon,e", po::value<double>()->default_value( 1.0 ), "the initial and final parameter epsilon of AT functional at the same time." )
     ("epsilon-1", po::value<double>(), "the initial parameter epsilon." )
     ("epsilon-2", po::value<double>(), "the final parameter epsilon." )
@@ -340,6 +342,7 @@ int main( int argc, char* argv[] )
       return 1;
     }
   string f1 = vm[ "input" ].as<string>();
+  string fm = vm[ "mask" ].as<string>();
   string f2 = vm[ "output" ].as<string>();
   double l1  = vm[ "lambda-1" ].as<double>();
   double l2  = vm[ "lambda-2" ].as<double>();
@@ -348,6 +351,7 @@ int main( int argc, char* argv[] )
   if ( l2 > l1 ) l2 = l1;
   if ( lr <= 1.0 ) lr = sqrt(2);
   double a  = vm[ "alpha" ].as<double>();
+  double b  = vm[ "beta" ].as<double>();
   double e  = vm[ "epsilon" ].as<double>();
   double e1 = vm.count( "epsilon-1" ) ? vm[ "epsilon-1" ].as<double>() : e;
   double e2 = vm.count( "epsilon-2" ) ? vm[ "epsilon-2" ].as<double>() : e;
@@ -363,6 +367,10 @@ int main( int argc, char* argv[] )
   trace.beginBlock("Reading image");
   Image image = GenericReader<Image>::import( f1 );
   Image end_image = image;
+  trace.endBlock();
+
+  trace.beginBlock("Reading mask");
+  Image mask = GenericReader<Image>::import( fm );
   trace.endBlock();
 
   // opening file
@@ -397,6 +405,21 @@ int main( int argc, char* argv[] )
     }
   trace.info() << "min_g= " << min_g << " max_g= " << max_g << std::endl;
   trace.endBlock();
+
+  trace.beginBlock("Creating mask");
+  Calculus::PrimalForm0 m( calculus );
+  for ( Calculus::Index index = 0; index < m.myContainer.rows(); index++)
+    {
+      const Calculus::SCell& cell = m.getSCell( index );
+      m.myContainer( index ) = ((double) mask( K.sCoords( cell ) )) / 255.0;
+      m.myContainer( index ) > 0.5 ? m.myContainer( index ) = 1.0 : m.myContainer( index ) = 0.0;
+    }
+  trace.endBlock();
+
+  ostringstream ossGM;
+  ossGM << boost::format("%s-g-mask.pgm") %f2;
+  string str_image_g_m = ossGM.str();
+  savePrimalForm0ToImage( calculus, end_image, diag(calculus,m)*g, str_image_g_m);
 
   // u = g at the beginning
   trace.info() << "u" << endl;
@@ -461,7 +484,7 @@ int main( int argc, char* argv[] )
   Calculus::PrimalIdentity2 invG2 = Id2; //     = ( 1.0/(h*h) ) * calculus.identity<2, PRIMAL>();
 
   // Building alpha_G0_1
-  const Calculus::PrimalIdentity0 alpha_iG0 = a * Id0; // a * calculus.identity<0, PRIMAL>(); // a * invG0; //diag_alpha;
+  const Calculus::PrimalIdentity0 alpha_iG0 = a * diag(calculus,m) * Id0; // a * calculus.identity<0, PRIMAL>(); // a * invG0; //diag_alpha;
   const Calculus::PrimalForm0 alpha_iG0_g   = alpha_iG0 * g;
 
   // Builds a Laplacian but at distance 2 !
@@ -518,7 +541,7 @@ int main( int argc, char* argv[] )
               //double tvtSSv = 0.0;
               Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
               Calculus::PrimalDerivative0 v_A = diag_v * primal_D0;
-              Calculus::PrimalIdentity0 Av2A = square( calculus, v_A ) + alpha_iG0;
+              Calculus::PrimalIdentity0 Av2A = b*square( calculus, v_A ) + alpha_iG0;
               trace.info() << "Prefactoring matrix Av2A := tA_v_tv_A + alpha_iG0" << endl;
               trace.info() << "-------------------------------------------------------------------------------" << endl;
               // const Matrix& M = Av2A.myContainer;
@@ -536,7 +559,7 @@ int main( int argc, char* argv[] )
               trace.beginBlock("Solving for v");
               trace.info() << "Building matrix BB+Mw2" << endl;
               const Calculus::PrimalIdentity1 A_u = diag( calculus, primal_D0 * u );
-              const Calculus::PrimalIdentity1 tu_tA_A_u = square( calculus, A_u );
+              const Calculus::PrimalIdentity1 tu_tA_A_u = b*square( calculus, A_u );
               solver_v.compute( tu_tA_A_u + BB );
               v = solver_v.solve( (1.0/eps) * l_sur_4 );
               trace.info() << ( solver_v.isValid() ? "OK" : "ERROR" ) << " " << solver_v.myLinearAlgebraSolver.info() << endl;
@@ -641,25 +664,26 @@ int main( int argc, char* argv[] )
       int int_l = (int) floor(l);
       int dec_l = (int) (floor((l-floor(l))*10000000));
 
-      ostringstream ossU;
-      ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
-      string str_image_u = ossU.str();
-      savePrimalForm0ToImage( calculus, end_image, u, str_image_u);
+//      ostringstream ossU;
+//      ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
+//      string str_image_u = ossU.str();
+//      savePrimalForm0ToImage( calculus, end_image, u, str_image_u);
 
-      ostringstream ossV;
-      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
-      string str_image_v = ossV.str();
-      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
+//      ostringstream ossV;
+//      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+//      string str_image_v = ossV.str();
+//      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
 
       ostringstream ossU0V1;
       ossU0V1 << boost::format("%s-l%.7f-u0-v1.eps") %f2 %l;
       string str_image_u0_v1 = ossU0V1.str();
       saveFormsToEps( calculus, u, v, str_image_u0_v1 );
 
-      ostringstream ossGV1;
-      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
-      string str_image_g_v1 = ossGV1.str();
-      saveFormsToEps( calculus, g, v, str_image_g_v1 );
+      //      ostringstream ossGV1;
+      //      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
+      //      string str_image_g_v1 = ossGV1.str();
+      //      saveFormsToEps( calculus, g, v, str_image_g_v1 );
+
 
       l1 /= lr;
     }
