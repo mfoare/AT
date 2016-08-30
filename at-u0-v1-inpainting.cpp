@@ -294,6 +294,7 @@ int main( int argc, char* argv[] )
   general_opt.add_options()
     ("help,h", "display this message")
     ("input,i", po::value<string>(), "the input image filename." )
+    ("mask,m", po::value<string>(), "the input mask filename." )
     ("output,o", po::value<string>()->default_value( "AT" ), "the output image basename." )
     ("lambda,l", po::value<double>(), "the parameter lambda." )
     ("lambda-1,1", po::value<double>()->default_value( 0.3125 ), "the initial parameter lambda (l1)." ) // 0.3125
@@ -341,6 +342,7 @@ int main( int argc, char* argv[] )
       return 1;
     }
   string f1 = vm[ "input" ].as<string>();
+  string fm = vm[ "mask" ].as<string>();
   string f2 = vm[ "output" ].as<string>();
   double l1  = vm[ "lambda-1" ].as<double>();
   double l2  = vm[ "lambda-2" ].as<double>();
@@ -367,6 +369,10 @@ int main( int argc, char* argv[] )
   Image end_image = image;
   trace.endBlock();
 
+  trace.beginBlock("Reading mask");
+  Image mask = GenericReader<Image>::import( fm );
+  trace.endBlock();
+
   // opening file
   const string file = f2 + ".txt";
   ofstream f(file.c_str());
@@ -374,6 +380,23 @@ int main( int argc, char* argv[] )
 
   trace.beginBlock("Creating calculus");
   typedef DiscreteExteriorCalculus<2,2, EigenLinearAlgebraBackend> Calculus;
+  typedef Calculus::PrimalForm0       PrimalForm0;
+  typedef Calculus::PrimalForm1       PrimalForm1;
+  typedef Calculus::PrimalDerivative0 PrimalDerivative0;
+  typedef Calculus::PrimalDerivative1 PrimalDerivative1;
+  typedef Calculus::DualDerivative0   DualDerivative0;
+  typedef Calculus::DualDerivative1   DualDerivative1;
+  typedef Calculus::PrimalHodge0      PrimalHodge0;
+  typedef Calculus::PrimalHodge1      PrimalHodge1;
+  typedef Calculus::PrimalHodge2      PrimalHodge2;
+  typedef Calculus::DualHodge0        DualHodge0;
+  typedef Calculus::DualHodge1        DualHodge1;
+  typedef Calculus::DualHodge2        DualHodge2;
+  typedef Calculus::PrimalIdentity0   PrimalIdentity0;
+  typedef Calculus::PrimalIdentity1   PrimalIdentity1;
+  typedef Calculus::PrimalIdentity2   PrimalIdentity2;
+  typedef Calculus::Index             Index;
+  typedef Calculus::SCell             SCell;
   Domain domain = image.domain();
   Point p0 = domain.lowerBound(); p0 *= 2;
   Point p1 = domain.upperBound(); p1 *= 2;
@@ -387,11 +410,11 @@ int main( int argc, char* argv[] )
     calculus.insertSCell( K.sCell( *it ) ); // ajoute toutes les cellules de Khalimsky.
   calculus.updateIndexes();
   trace.info() << calculus << endl;
-  Calculus::PrimalForm0 g( calculus );
+  PrimalForm0 g( calculus );
   double min_g = 300.0, max_g = 0.0;
-  for ( Calculus::Index index = 0; index < g.myContainer.rows(); index++)
+  for ( Index index = 0; index < g.myContainer.rows(); index++)
     {
-      const Calculus::SCell& cell = g.getSCell( index );
+      const SCell& cell = g.getSCell( index );
       g.myContainer( index ) = ((double) image( K.sCoords( cell ) )) /
     255.0;
       min_g = std::min( min_g , g.myContainer( index ) );
@@ -400,34 +423,50 @@ int main( int argc, char* argv[] )
   trace.info() << "min_g= " << min_g << " max_g= " << max_g << std::endl;
   trace.endBlock();
 
+  trace.beginBlock("Creating mask");
+  PrimalForm0 m( calculus );
+  for ( Index index = 0; index < m.myContainer.rows(); index++)
+    {
+      const SCell& cell = m.getSCell( index );
+      double col = ((double) mask( K.sCoords( cell ) )) / 255.0;
+      col > 0.5 ? col = 1.0 : col = 0.0;
+      m.myContainer( index ) = col;
+    }
+
+  ostringstream ossGM;
+  ossGM << boost::format("%s-g-mask.pgm") %f2;
+  string str_image_gm = ossGM.str();
+  savePrimalForm0ToImage( calculus, end_image, diag(calculus,m)*g, str_image_gm);
+  trace.endBlock();
+
   // u = g at the beginning
   trace.info() << "u" << endl;
-  Calculus::PrimalForm0 u = g;
+  PrimalForm0 u = g;
   // v = 1 at the beginning
   trace.info() << "v" << endl;
-  Calculus::PrimalForm1 v( calculus );
-  for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+  PrimalForm1 v( calculus );
+  for ( Index index = 0; index < v.myContainer.rows(); index++)
     v.myContainer( index ) = 1;
 
   trace.beginBlock("building AT functionnals");
   trace.info() << "primal_D0" << endl;
-  const Calculus::PrimalDerivative0 	primal_D0 = calculus.derivative<0,PRIMAL>();
+  const PrimalDerivative0   primal_D0 = calculus.derivative<0,PRIMAL>();
   trace.info() << "primal_D1" << endl;
-  const Calculus::PrimalDerivative1 	primal_D1 = calculus.derivative<1,PRIMAL>();
+  const PrimalDerivative1   primal_D1 = calculus.derivative<1,PRIMAL>();
   trace.info() << "dual_D0" << endl;
-  const Calculus::DualDerivative0       dual_D0   = calculus.derivative<0,DUAL>();
+  const DualDerivative0     dual_D0   = calculus.derivative<0,DUAL>();
   trace.info() << "dual_D1" << endl;
-  const Calculus::DualDerivative1       dual_D1   = calculus.derivative<1,DUAL>();
+  const DualDerivative1     dual_D1   = calculus.derivative<1,DUAL>();
   trace.info() << "primal_h0" << endl;
-  const Calculus::PrimalHodge0          primal_h0 = calculus.hodge<0,PRIMAL>();
+  const PrimalHodge0        primal_h0 = calculus.hodge<0,PRIMAL>();
   trace.info() << "primal_h1" << endl;
-  const Calculus::PrimalHodge1          primal_h1 = calculus.hodge<1,PRIMAL>();
+  const PrimalHodge1        primal_h1 = calculus.hodge<1,PRIMAL>();
   trace.info() << "primal_h2" << endl;
-  const Calculus::PrimalHodge2          primal_h2 = calculus.hodge<2,PRIMAL>();
+  const PrimalHodge2        primal_h2 = calculus.hodge<2,PRIMAL>();
   trace.info() << "dual_h1" << endl;
-  const Calculus::DualHodge1         	dual_h1   = calculus.hodge<1,DUAL>();
+  const DualHodge1         	dual_h1   = calculus.hodge<1,DUAL>();
   trace.info() << "dual_h2" << endl;
-  const Calculus::DualHodge2            dual_h2   = calculus.hodge<2,DUAL>();
+  const DualHodge2          dual_h2   = calculus.hodge<2,DUAL>();
 
   const DGtal::Dimension dimX = 0, dimY = 1;
 
@@ -445,26 +484,26 @@ int main( int argc, char* argv[] )
   trace.endBlock();
 
 
-  const Calculus::PrimalIdentity0 Id0 = calculus.identity<0, PRIMAL>();
-  const Calculus::PrimalIdentity1 Id1 = calculus.identity<1, PRIMAL>();
-  const Calculus::PrimalIdentity2 Id2 = calculus.identity<2, PRIMAL>();
+  const PrimalIdentity0 Id0 = calculus.identity<0, PRIMAL>();
+  const PrimalIdentity1 Id1 = calculus.identity<1, PRIMAL>();
+  const PrimalIdentity2 Id2 = calculus.identity<2, PRIMAL>();
 
   // Weight matrices
   //  Calculus::DualIdentity2   G0 		= ( 1.0/(h*h) ) * calculus.identity<2, DUAL>();
-  Calculus::PrimalIdentity0 G0 	  = Id0; //	= ( 1.0/(h*h) ) * calculus.identity<0, PRIMAL>();
-  Calculus::PrimalIdentity0 invG0 = Id0; //   = 	(h*h) 	* calculus.identity<0, PRIMAL>();
+  const PrimalIdentity0 G0 	  = Id0; //	= ( 1.0/(h*h) ) * calculus.identity<0, PRIMAL>();
+  const PrimalIdentity0 invG0 = Id0; //   = 	(h*h) 	* calculus.identity<0, PRIMAL>();
 
   //  Calculus::DualIdentity1   G1 		= calculus.identity<1, DUAL>();
-  Calculus::PrimalIdentity1 G1    = Id1; //	= calculus.identity<1, PRIMAL>();
-  Calculus::PrimalIdentity1 invG1 = Id1; //     = calculus.identity<1, PRIMAL>();
+  const PrimalIdentity1 G1    = Id1; //	= calculus.identity<1, PRIMAL>();
+  const PrimalIdentity1 invG1 = Id1; //     = calculus.identity<1, PRIMAL>();
 
   //  Calculus::DualIdentity0   G2 		= 		(h*h) 	* calculus.identity<0, DUAL>();
-  Calculus::PrimalIdentity2 G2    = Id2; //	= 		(h*h) 	* calculus.identity<2, PRIMAL>();
-  Calculus::PrimalIdentity2 invG2 = Id2; //     = ( 1.0/(h*h) ) * calculus.identity<2, PRIMAL>();
+  const PrimalIdentity2 G2    = Id2; //	= 		(h*h) 	* calculus.identity<2, PRIMAL>();
+  const PrimalIdentity2 invG2 = Id2; //     = ( 1.0/(h*h) ) * calculus.identity<2, PRIMAL>();
 
   // Building alpha_G0_1
-  const Calculus::PrimalIdentity0 alpha_iG0 = a * Id0; // a * calculus.identity<0, PRIMAL>(); // a * invG0; //diag_alpha;
-  const Calculus::PrimalForm0 alpha_iG0_g   = alpha_iG0 * g;
+  const PrimalIdentity0 alpha_iG0 = a * diag(calculus,m) * Id0; // a * calculus.identity<0, PRIMAL>(); // a * invG0; //diag_alpha;
+  const PrimalForm0 alpha_iG0_g   = alpha_iG0 * g;
 
   // Builds a Laplacian but at distance 2 !
   // const Matrix& M = tA_tS_S_A.myContainer;
@@ -478,11 +517,11 @@ int main( int argc, char* argv[] )
 
   // Building iG1_A_G0_tA_iG1 + tB_iG2_B
 //  // A.tA
-//  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1 );
+//  const PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1 );
 //  // tB.B
-//  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
+//  const PrimalIdentity1 lap_operator_v = -1.0 * ( dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
   // tB.B + A.tA
-  const Calculus::PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
+  const PrimalIdentity1 lap_operator_v = -1.0 * ( invG1 * primal_D0 * G0 * dual_h2 * dual_D1 * primal_h1 * invG1
                                                             + dual_h1 * dual_D0 * primal_h2 * invG2 * primal_D1 );
 
   // SparseLU is so much faster than SparseQR
@@ -500,16 +539,16 @@ int main( int argc, char* argv[] )
       trace.info() << "************ lambda = " << l1 << " **************" << endl;
       double l = l1;
       trace.info() << "B'B'" << endl;
-      const Calculus::PrimalIdentity1 lBB = l * lap_operator_v;
-      Calculus::PrimalForm1 l_sur_4( calculus );
-      for ( Calculus::Index index = 0; index < l_sur_4.myContainer.rows(); index++)
+      const PrimalIdentity1 lBB = l * lap_operator_v;
+      PrimalForm1 l_sur_4( calculus );
+      for ( Index index = 0; index < l_sur_4.myContainer.rows(); index++)
         l_sur_4.myContainer( index ) = l/4.0;
       l_sur_4 = Id1 * l_sur_4; //tS_S * l_sur_4; //
       double last_eps = e1;
       for ( double eps = e1; eps >= e2; eps /= er )
         {
           last_eps = eps;
-          Calculus::PrimalIdentity1 BB = eps * lBB + ( l/(4.0*eps) ) * Id1; // tS_S;
+          PrimalIdentity1 BB = eps * lBB + ( l/(4.0*eps) ) * Id1; // tS_S;
           int i = 0;
           for ( ; i < n; ++i )
             {
@@ -518,9 +557,9 @@ int main( int argc, char* argv[] )
               trace.info() << "Building matrix Av2A" << endl;
 
               //double tvtSSv = 0.0;
-              Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
-              Calculus::PrimalDerivative0 v_A = diag_v * primal_D0;
-              Calculus::PrimalIdentity0 Av2A = b*square( calculus, v_A ) + alpha_iG0;
+              PrimalIdentity1 diag_v = diag( calculus, v );
+              PrimalDerivative0 v_A = diag_v * primal_D0;
+              PrimalIdentity0 Av2A = b*square( calculus, v_A ) + alpha_iG0;
               trace.info() << "Prefactoring matrix Av2A := tA_v_tv_A + alpha_iG0" << endl;
               trace.info() << "-------------------------------------------------------------------------------" << endl;
               // const Matrix& M = Av2A.myContainer;
@@ -534,11 +573,11 @@ int main( int argc, char* argv[] )
               trace.info() << "-------------------------------------------------------------------------------" << endl;
               trace.endBlock();
 
-              const Calculus::PrimalForm1 former_v = v;
+              const PrimalForm1 former_v = v;
               trace.beginBlock("Solving for v");
               trace.info() << "Building matrix BB+Mw2" << endl;
-              const Calculus::PrimalIdentity1 A_u = diag( calculus, primal_D0 * u );
-              const Calculus::PrimalIdentity1 tu_tA_A_u = b*square( calculus, A_u );
+              const PrimalIdentity1 A_u = diag( calculus, primal_D0 * u );
+              const PrimalIdentity1 tu_tA_A_u = b*square( calculus, A_u );
               solver_v.compute( tu_tA_A_u + BB );
               v = solver_v.solve( (1.0/eps) * l_sur_4 );
               trace.info() << ( solver_v.isValid() ? "OK" : "ERROR" ) << " " << solver_v.myLinearAlgebraSolver.info() << endl;
@@ -548,7 +587,7 @@ int main( int argc, char* argv[] )
               double m1 = 1.0;
               double m2 = 0.0;
               double ma = 0.0;
-              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+              for ( Index index = 0; index < v.myContainer.rows(); index++)
                 {
                   double val = v.myContainer( index );
                   m1 = std::min( m1, val );
@@ -557,14 +596,14 @@ int main( int argc, char* argv[] )
                 }
               trace.info() << "1-form v: min=" << m1 << " avg=" << ( ma/ v.myContainer.rows() )
                            << " max=" << m2 << std::endl;
-              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+              for ( Index index = 0; index < v.myContainer.rows(); index++)
                 v.myContainer( index ) = std::min( std::max(v.myContainer( index ), 0.0) , 1.0 );
 
               double n_infty = 0.0;
               double n_2 = 0.0;
               double n_1 = 0.0;
 
-              for ( Calculus::Index index = 0; index < v.myContainer.rows(); index++)
+              for ( Index index = 0; index < v.myContainer.rows(); index++)
                 {
                   n_infty = max( n_infty, fabs( v.myContainer( index ) - former_v.myContainer( index ) ) );
                   n_2    += ( v.myContainer( index ) - former_v.myContainer( index ) )
@@ -587,14 +626,14 @@ int main( int argc, char* argv[] )
       trace.beginBlock("Computing energies");
 
       // a(u-g)^2
-      Calculus::PrimalIdentity0 diag_alpha = a * Id0;
-      const Calculus::PrimalForm0 u_minus_g = u - g;
+      PrimalIdentity0 diag_alpha = a * Id0;
+      const PrimalForm0 u_minus_g = u - g;
       double alpha_square_u_minus_g = innerProduct( calculus, diag_alpha * u_minus_g, u_minus_g );
       trace.info() << "- a(u-g)^2   = " << alpha_square_u_minus_g << std::endl;
       // v^2|grad u|^2
 
-      const Calculus::PrimalIdentity1 diag_v = diag( calculus, v );
-      const Calculus::PrimalForm1 v_A_u = diag_v * primal_D0 * u;
+      const PrimalIdentity1 diag_v = diag( calculus, v );
+      const PrimalForm1 v_A_u = diag_v * primal_D0 * u;
       double square_v_grad_u = innerProduct( calculus, v_A_u, v_A_u );
       trace.info() << "- v^2|grad u|^2 = " << square_v_grad_u << std::endl;
 //      // JOL: 1000 * plus rapide !
@@ -606,14 +645,14 @@ int main( int argc, char* argv[] )
 //      // 	for ( Calculus::Index index_j = 0; index_j < u.myContainer.rows(); index_j++)
 //      //     V2gradU2 += u.myContainer( index_i ) * Av2A.myContainer.coeff( index_i,index_j ) * u.myContainer( index_j ) ;
 
-//      // le|grad v|^2
-      Calculus::PrimalForm1 v_prime = lap_operator_v * v;
+      // le|grad v|^2
+      PrimalForm1 v_prime = lap_operator_v * v;
       double le_square_grad_v = l * last_eps * innerProduct( calculus, v, v_prime );
       trace.info() << "- le|grad v|^2  = " << le_square_grad_v << std::endl;
 
       // l(1-v)^2/4e
-      Calculus::PrimalForm1 one_minus_v = v;
-      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
+      PrimalForm1 one_minus_v = v;
+      for ( Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
         one_minus_v.myContainer( index_i ) = 1.0 - one_minus_v.myContainer( index_i );
       double l_over_4e_square_1_minus_v
         = l / (4*last_eps) * innerProduct( calculus, one_minus_v, one_minus_v );
@@ -648,15 +687,23 @@ int main( int argc, char* argv[] )
       string str_image_u = ossU.str();
       savePrimalForm0ToImage( calculus, end_image, u, str_image_u);
 
-      ostringstream ossV;
-      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
-      string str_image_v = ossV.str();
-      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
+//      ostringstream ossV;
+//      ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+//      string str_image_v = ossV.str();
+//      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
 
       ostringstream ossU0V1;
       ossU0V1 << boost::format("%s-l%.7f-u0-v1.eps") %f2 %l;
       string str_image_u0_v1 = ossU0V1.str();
       saveFormsToEps( calculus, u, v, str_image_u0_v1 );
+
+      ostringstream ossUminusG;
+      PrimalForm0 abs_u_minus_g = u_minus_g;
+      for ( Index index = 0; index < abs_u_minus_g.myContainer.rows(); index++)
+          abs_u_minus_g.myContainer( index ) < 0 ? abs_u_minus_g.myContainer( index ) *= -1.0 : abs_u_minus_g.myContainer( index ) *= 1.0;
+      ossUminusG << boost::format("%s-l%.7f-diff.pgm") %f2 %l;
+      string str_image_u_minus_g = ossUminusG.str();
+      savePrimalForm0ToImage( calculus, end_image, abs_u_minus_g, str_image_u_minus_g);
 
 //      ostringstream ossGV1;
 //      ossGV1 << boost::format("%s-l%.7f-g-v1.eps") %f2 %l;
