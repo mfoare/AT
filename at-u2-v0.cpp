@@ -357,6 +357,8 @@ int main( int argc, char* argv[] )
     ("sigma,s", po::value<double>()->default_value( 2.0 ), "the parameter of the first convolution." )
     ("rho,r", po::value<double>()->default_value( 3.0 ), "the parameter of the second convolution." )
     ("image-size,t", po::value<double>()->default_value( 64.0 ), "the size of the image." )
+    ("snr", "force computation of SNR." )
+    ("image-snr", po::value<string>(), "the input image without deterioration." )
     ;
 
   bool parseOK=true;
@@ -368,7 +370,7 @@ int main( int argc, char* argv[] )
     cerr << "Error checking program options: "<< ex.what()<< endl;
   }
   po::notify(vm);
-  if ( ! parseOK || vm.count("help") || !vm.count("input") )
+  if ( ! parseOK || vm.count("help") || !vm.count("input") || (vm.count("snr") && !vm.count("image-snr")) )
     {
       cerr << "Usage: " << argv[0] << " -i toto.pgm\n"
            << "Computes the Ambrosio-Tortorelli reconstruction/segmentation of an input image."
@@ -398,6 +400,13 @@ int main( int argc, char* argv[] )
   double e2 = vm.count( "epsilon-2" ) ? vm[ "epsilon-2" ].as<double>() : e;
   double er = vm[ "epsilon-r" ].as<double>();
   double t  = vm[ "image-size" ].as<double>();
+
+  bool snr = false;
+  (vm.count("snr") == 1) ? snr = true : snr = false;
+  string f_snr = "";
+  if ( snr )
+    f_snr = vm[ "image-snr" ].as<string>();
+
   //double h  = vm[ "gridstep" ].as<double>();
   double h  = 1.0 / t;
 
@@ -408,12 +417,25 @@ int main( int argc, char* argv[] )
   trace.beginBlock("Reading image");
   Image image = GenericReader<Image>::import( f1 );
   Image end_image = image;
+  Image image_snr = image;
+  if ( snr )
+      image_snr = GenericReader<Image>::import( f_snr );
   trace.endBlock();
 
   // opening file
   const string file = f2 + ".txt";
   ofstream f(file.c_str());
-  f << "#  l \t" << " a \t" << " e \t" << "a(u-g)^2 \t" << "v^2|grad u|^2 \t" << "  le|grad v|^2 \t" << "  l(1-v)^2/4e \t" << " l.per \t" << "AT tot"<< endl;
+  f << "# l \t"
+    << " a \t"
+    << " e \t"
+    << " a(u-g)^2 \t"
+    << " v^2|grad u|^2 \t"
+    << " le|grad v|^2 \t"
+    << " l(1-v)^2/4e \t"
+    << " l.per \t"
+    << " AT tot \t"
+    << " SNR"
+    << endl;
 
   trace.beginBlock("Creating calculus");
   typedef DiscreteExteriorCalculus<2,2, EigenLinearAlgebraBackend> Calculus;
@@ -439,6 +461,17 @@ int main( int argc, char* argv[] )
       g.myContainer( index ) = ((double) image( K.sCoords( cell ) )) /
         255.0;
     }
+
+  Calculus::PrimalForm2 g_snr( calculus );
+  if ( snr )
+  {
+    for ( Calculus::Index index = 0; index < g_snr.myContainer.rows(); index++)
+      {
+        const Calculus::SCell& cell = g_snr.getSCell( index );
+        g_snr.myContainer( index ) = ((double) image_snr( K.sCoords( cell ) )) /
+        255.0;
+      }
+  }
   trace.endBlock();
 
   // u = g at the beginning
@@ -641,13 +674,51 @@ int main( int argc, char* argv[] )
        // AT tot
        double ATtot = alpha_square_u_minus_g + square_v1_grad_u + Lper;
 
-// //      //      double per = 0.0;
-// //      //      for ( Calculus::Index index_i = 0; index_i < v.myContainer.rows(); index_i++)
-// //      //      {
-// //      //        per += (1/(4*e)) * (1 - 2*v.myContainer( index_i ) + v.myContainer( index_i )*v.myContainer( index_i ));
-// //      //        for ( Calculus::Index index_j = 0; index_j < v.myContainer.rows(); index_j++)
-// //      //            per += e * v.myContainer( index_i ) * tBB.myContainer( index_i,index_j ) * v.myContainer( index_j );
-// //      //      }
+       // SNR
+       double snr_value = 0.0;
+       if ( snr )
+       {
+           /*
+           %% LOAD DATA
+           % perfect
+           g  = double(imread([perfect '.png']))/255.;
+           im = double(imread([noisy   '.png']))/255.;
+
+           %% CHECK SIZES
+           n = size(g,1);
+           m = size(g,2);
+
+           if ( size(g,1) ~= size(im,1) || size(g,2) ~= size(im,2) )
+               disp('Dimension mismatch');
+
+           else if size(g,3) ~= size(im,3)
+                   g_tmp  =  g(:,:,1); clear g;
+                   im_tmp = im(:,:,1); clear im;
+
+                   g = zeros(n,m,3);
+                   g(:,:,1) = g_tmp; g(:,:,2) = g_tmp; g(:,:,3) = g_tmp;
+
+                   im = zeros(n,m,3);
+                   im(:,:,1) = im_tmp; im(:,:,2) = im_tmp; im(:,:,3) = im_tmp;
+               end
+           end
+
+
+           %% COMPUTATION OF SNR
+           diff    = (g - im).^2;
+           for c = 1 : size(diff,3)
+               MSE(c)  = sum(sum(diff(:,:,c))) ./ (n*m);
+           end
+           MSE_tot = sum(MSE) ./ size(diff,3);
+           r       = 10 .* log10(1./MSE_tot);
+           */
+
+
+           const Calculus::PrimalForm2 u_minus_g_snr = u - g_snr;
+           double u_minus_g_snr_square = innerProduct( calculus, u_minus_g_snr, u_minus_g_snr );
+           double MSE = u_minus_g_snr_square / u_minus_g_snr.length();
+           snr_value = 10.0 * log10(1.0 / MSE);
+       }
 
 
        // f << "l  " << "  a  " << "  e  " << "  a(u-g)^2  " << "  v^2|grad u|^2  " << "  le|grad v|^2  " << "  l(1-v)^2/4e  " << "  l.per  " << "  AT tot"<< endl;
@@ -657,7 +728,8 @@ int main( int argc, char* argv[] )
          << "\t" << tronc(le_square_grad_v,5)
          << "\t" << tronc(l_over_4e_square_1_minus_v,5)
          << "\t" << tronc(Lper,5)
-         << "\t" << tronc(ATtot,5) << endl;
+         << "\t" << tronc(ATtot,5)
+         << "\t" << tronc(snr_value,5) << endl;
 
       trace.endBlock();
 
