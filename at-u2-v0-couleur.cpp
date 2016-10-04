@@ -862,27 +862,27 @@ int main( int argc, char* argv[] )
       int dec_l = (int) (floor((l-floor(l))*10000000));
 
       ostringstream ossU;
-      ossU << boost::format("%s-l%.7f-u.pgm") %f2 %l;
+      ossU << boost::format("%s-a%.5f-l%.7f-u.pgm") %f2 %a %l;
       string str_image_u = ossU.str();
       savePrimalForms2ToPPMImage( calculus, end_image, u[ 0 ], u[ 1 ], u[ 2 ], str_image_u);
 
       // ostringstream ossV;
-      // ossV << boost::format("%s-l%.7f-v.pgm") %f2 %l;
+      // ossV << boost::format("%s-a%.5f-l%.7f-v.pgm") %f2 %a %l;
       // string str_image_v = ossV.str();
       // savePrimalForm0ToImage( calculus, end_image, v, str_image_v);
 
       ostringstream ossV1;
-      ossV1 << boost::format("%s-l%.7f-v1.pgm") %f2 %l;
+      ossV1 << boost::format("%s-a%.5f-l%.7f-v1.pgm") %f2 %a %l;
       string str_image_v1 = ossV1.str();
       savePrimalForm1ToImage( calculus, dbl_image, v1, str_image_v1 );
 
       ostringstream ossU2V0;
-      ossU2V0 << boost::format("%s-l%.7f-u2-v0.eps") %f2 %l;
+      ossU2V0 << boost::format("%s-a%.5f-l%.7f-u2-v0.eps") %f2 %a %l;
       string str_image_u2_v0 = ossU2V0.str();
       saveFormsToEps( calculus, u[ 0 ], u[ 1 ], u[ 2 ], v, str_image_u2_v0 );
 
       ostringstream ossGV0;
-      ossGV0 << boost::format("%s-l%.7f-g-v0.eps") %f2 %l;
+      ossGV0 << boost::format("%s-a%.5f-l%.7f-g-v0.eps") %f2 %a %l;
       string str_image_g_v0 = ossGV0.str();
       saveFormsToEps( calculus, g[ 0 ], g[ 1 ], g[ 2 ], v, str_image_g_v0 );
 
