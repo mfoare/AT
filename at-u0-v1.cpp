@@ -475,8 +475,7 @@ int main( int argc, char* argv[] )
 //    //TypeHelper<Color,Calculus>::Image Image;
 //  }
 
-  const int color_arg = vm.count("color");
-  const bool B = ( color_arg < 1);
+  const bool B = ( vm.count("color") = 0 );
   typedef std::conditional<true,
                            ImageContainerBySTLVector<Domain, unsigned char>,
                            ImageContainerBySTLVector<Domain, Color>
