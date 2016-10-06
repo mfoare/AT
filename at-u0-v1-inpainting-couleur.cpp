@@ -505,7 +505,7 @@ int main( int argc, char* argv[] )
     }
 
   ostringstream ossGM;
-  ossGM << boost::format("%s-g-mask.pmm") %f2;
+  ossGM << boost::format("%s-g-mask.ppm") %f2;
   string str_image_gm = ossGM.str();
   savePrimalForms0ToPPMImage( calculus, end_image, diag(calculus,m)*g[ 0 ],
                                                    diag(calculus,m)*g[ 1 ],
@@ -751,10 +751,10 @@ int main( int argc, char* argv[] )
 //      string str_image_v = ossV.str();
 //      savePrimalForm1ToImage( calculus, dbl_image, v, str_image_v );
 
-      ostringstream ossU0V1;
-      ossU0V1 << boost::format("%s-a%.5f-l%.7f-u0-v1.eps") %f2 %a %l;
-      string str_image_u0_v1 = ossU0V1.str();
-      saveFormsToEps( calculus, u[ 0 ], u[ 1 ], u[ 2 ], v, str_image_u0_v1 );
+//      ostringstream ossU0V1;
+//      ossU0V1 << boost::format("%s-a%.5f-l%.7f-u0-v1.eps") %f2 %a %l;
+//      string str_image_u0_v1 = ossU0V1.str();
+//      saveFormsToEps( calculus, u[ 0 ], u[ 1 ], u[ 2 ], v, str_image_u0_v1 );
 
       ostringstream ossUminusG;
       vector<PrimalForm0> abs_u_minus_g;

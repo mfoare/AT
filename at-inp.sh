@@ -11,8 +11,8 @@ EXEC=$1
 OUTPUT_REP=$2
 OUTPUT_FILE=$3
 IM=$4
-MASK=($5)
-#MASK=$5
+#MASK=($5)
+MASK=$5
 
 A1=$6
 A2=$7
@@ -28,10 +28,10 @@ E2=${13}
 
 #(cd build && make $EXEC)
 
-len=${#MASK[*]}
-for I in $( seq 1 1 $(($len-1)) )
-do
-	M=${MASK[$I]}		
+#len=${#MASK[*]}
+#for I in $( seq 1 1 $(($len-1)) )
+#do
+	#M=${MASK[$I]}		
 	M=$MASK
 	O=$OUTPUT_FILE'/'$OUTPUT_FILE
 	mkdir -p $OUTPUT_REP'/'$OUTPUT_FILE
@@ -41,7 +41,7 @@ do
 		./build/$EXEC -i $IM -m $M -o $OUTPUT_REP'/'$O  --alpha $A --lambda-1 $L1 --lambda-2 $L2 --lambda-ratio $LR --epsilon-1 $E1 --epsilon-2 $E2 
 	done
 			
-done
+#done
 
 
 fi
