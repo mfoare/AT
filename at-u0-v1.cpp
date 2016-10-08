@@ -335,24 +335,6 @@ double innerProduct( const Calculus& calculus,
   return val;
 }
 
-//template <typename T>
-//void process(T t)
-//{
-//    typedef ImageContainerBySTLVector<Domain, t> Image;
-//}
-
-
-//template <typename T, typename Calculus>
-//struct TypeHelper{
-//    //typedef std::vector<T,gc_allocator<T> > Vector;
-
-//    typedef typename Calculus::KSpace KSpace;
-//    typedef typename KSpace::Space    Space;
-//    typedef HyperRectDomain<Space>    Domain;
-
-//    typedef ImageContainerBySTLVector<Domain, T> Image;
-//};
-
 
 namespace DGtal {
   template <typename TComponent, DGtal::Dimension TM, DGtal::Dimension TN>
@@ -363,6 +345,80 @@ namespace DGtal {
     return ! ( m1.operator==( m2 ) );
   }
 }
+
+
+
+
+//namespace DGtal {
+template <typename TImage>
+void process( ) //const boost::program_options::variables_map& vm )
+{
+
+    TImage image;
+
+//    using namespace Z2i;
+//    using namespace DGtal;
+
+//    typedef DGtal::ImageContainerBySTLVector<DGtal::HyperRectDomain<DGtal::SpaceND<2u, int> >, unsigned char> Test;
+
+//    string f1 = vm[ "input" ].as<string>();
+//    string f2 = vm[ "output" ].as<string>();
+//    double l1  = vm[ "lambda-1" ].as<double>();
+//    double l2  = vm[ "lambda-2" ].as<double>();
+//    double lr  = vm[ "lambda-ratio" ].as<double>();
+//    if ( vm.count( "lambda" ) ) l1 = l2 = vm[ "lambda" ].as<double>();
+//    if ( l2 > l1 ) l2 = l1;
+//    if ( lr <= 1.0 ) lr = sqrt(2);
+//    double a  = vm[ "alpha" ].as<double>();
+//    double e  = vm[ "epsilon" ].as<double>();
+//    double e1 = vm.count( "epsilon-1" ) ? vm[ "epsilon-1" ].as<double>() : e;
+//    double e2 = vm.count( "epsilon-2" ) ? vm[ "epsilon-2" ].as<double>() : e;
+//    double er = vm[ "epsilon-r" ].as<double>();
+//    //double t  = vm[ "image-size" ].as<double>();
+
+//    bool snr = false;
+//    (vm.count("snr") == 1) ? snr = true : snr = false;
+//    string f_snr = "";
+//    if ( snr )
+//      f_snr = vm[ "image-snr" ].as<string>();
+
+//    Dimension dim = 1;
+//    ( vm.count("color") == 1 ) ? dim = 3 : dim = 1;
+
+
+//    //double h  = vm[ "gridstep" ].as<double>();
+//    //double h  = 1.0 / t;
+
+//    int    n  = vm[ "nbiter" ].as<int>();
+//    double s  = vm[ "sigma" ].as<double>();
+//    double r  = vm[ "rho" ].as<double>();
+
+//    typedef ImageContainerBySTLVector<Domain, double>           ImageDouble;
+//    typedef ImageContainerBySTLVector<Domain,
+//                      SimpleMatrix<double,2,2> >                ImageSimpleMatrix2d;
+//    typedef ImageContainerBySTLVector<Domain, RealVector>       ImageVector;
+
+//    typedef std::vector< unsigned char >::iterator              ImageIterator;
+//    typedef std::vector< double >::iterator 					ImageDoubleIterator;
+//    typedef std::vector< SimpleMatrix<double,2,2> >::iterator   ImageSimpleMatrix2dIterator;
+//    typedef std::vector< RealVector >::iterator 				ImageVectorIterator;
+
+
+//    trace.beginBlock("Reading image");
+//    TImage image;
+//    readImage<Image>( dim , f1 , image );
+//    Image end_image = image;
+//    Image image_snr = image;
+//    if ( snr )
+//      readImage<Image>( dim , f_snr , image_snr );
+//    trace.endBlock();
+
+
+
+}
+//}
+
+
 
 int main( int argc, char* argv[] )
 {
@@ -426,39 +482,40 @@ int main( int argc, char* argv[] )
        << endl;
       return 1;
     }
-  string f1 = vm[ "input" ].as<string>();
-  string f2 = vm[ "output" ].as<string>();
-  double l1  = vm[ "lambda-1" ].as<double>();
-  double l2  = vm[ "lambda-2" ].as<double>();
-  double lr  = vm[ "lambda-ratio" ].as<double>();
-  if ( vm.count( "lambda" ) ) l1 = l2 = vm[ "lambda" ].as<double>();
-  if ( l2 > l1 ) l2 = l1;
-  if ( lr <= 1.0 ) lr = sqrt(2);
-  double a  = vm[ "alpha" ].as<double>();
-  double e  = vm[ "epsilon" ].as<double>();
-  double e1 = vm.count( "epsilon-1" ) ? vm[ "epsilon-1" ].as<double>() : e;
-  double e2 = vm.count( "epsilon-2" ) ? vm[ "epsilon-2" ].as<double>() : e;
-  double er = vm[ "epsilon-r" ].as<double>();
-  //double t  = vm[ "image-size" ].as<double>();
 
-  bool snr = false;
-  (vm.count("snr") == 1) ? snr = true : snr = false;
-  string f_snr = "";
-  if ( snr )
-    f_snr = vm[ "image-snr" ].as<string>();
+//  string f1 = vm[ "input" ].as<string>();
+//  string f2 = vm[ "output" ].as<string>();
+//  double l1  = vm[ "lambda-1" ].as<double>();
+//  double l2  = vm[ "lambda-2" ].as<double>();
+//  double lr  = vm[ "lambda-ratio" ].as<double>();
+//  if ( vm.count( "lambda" ) ) l1 = l2 = vm[ "lambda" ].as<double>();
+//  if ( l2 > l1 ) l2 = l1;
+//  if ( lr <= 1.0 ) lr = sqrt(2);
+//  double a  = vm[ "alpha" ].as<double>();
+//  double e  = vm[ "epsilon" ].as<double>();
+//  double e1 = vm.count( "epsilon-1" ) ? vm[ "epsilon-1" ].as<double>() : e;
+//  double e2 = vm.count( "epsilon-2" ) ? vm[ "epsilon-2" ].as<double>() : e;
+//  double er = vm[ "epsilon-r" ].as<double>();
+//  //double t  = vm[ "image-size" ].as<double>();
 
-  Dimension dim = 1;
-  ( vm.count("color") == 1 ) ? dim = 3 : dim = 1;
+//  bool snr = false;
+//  (vm.count("snr") == 1) ? snr = true : snr = false;
+//  string f_snr = "";
+//  if ( snr )
+//    f_snr = vm[ "image-snr" ].as<string>();
 
-  if ( snr )
-    f_snr = vm[ "image-snr" ].as<string>();
+//  Dimension dim = 1;
+//  ( vm.count("color") == 1 ) ? dim = 3 : dim = 1;
 
-  //double h  = vm[ "gridstep" ].as<double>();
-  //double h  = 1.0 / t;
+//  if ( snr )
+//    f_snr = vm[ "image-snr" ].as<string>();
 
-  int    n  = vm[ "nbiter" ].as<int>();
-  double s  = vm[ "sigma" ].as<double>();
-  double r  = vm[ "rho" ].as<double>();
+//  //double h  = vm[ "gridstep" ].as<double>();
+//  //double h  = 1.0 / t;
+
+//  int    n  = vm[ "nbiter" ].as<int>();
+//  double s  = vm[ "sigma" ].as<double>();
+//  double r  = vm[ "rho" ].as<double>();
 
 
 //  if ( dim == 1 )
@@ -475,35 +532,43 @@ int main( int argc, char* argv[] )
 //    //TypeHelper<Color,Calculus>::Image Image;
 //  }
 
-  const bool B = ( vm.count("color") = 0 );
-  typedef std::conditional<true,
-                           ImageContainerBySTLVector<Domain, unsigned char>,
-                           ImageContainerBySTLVector<Domain, Color>
-                          > ::type Image;
+//  const bool B = ( vm.count("color") = 0 );
+//  typedef std::conditional<true,
+//                           ImageContainerBySTLVector<Domain, unsigned char>,
+//                           ImageContainerBySTLVector<Domain, Color>
+//                          > ::type Image;
 
 
   typedef ImageContainerBySTLVector<Domain, Color>              ColorImage;
   typedef ImageContainerBySTLVector<Domain, unsigned char>      GreyLevelImage;
-  typedef ImageContainerBySTLVector<Domain, double>             ImageDouble;
-  typedef ImageContainerBySTLVector<Domain,
-                    SimpleMatrix<double,2,2> >                  ImageSimpleMatrix2d;
-  typedef ImageContainerBySTLVector<Domain, RealVector>         ImageVector;
-
-  typedef std::vector< unsigned char >::iterator 			ImageIterator;
-  typedef std::vector< double >::iterator 					ImageDoubleIterator;
-  typedef std::vector< SimpleMatrix<double,2,2> >::iterator ImageSimpleMatrix2dIterator;
-  typedef std::vector< RealVector >::iterator 				ImageVectorIterator;
+  process<ColorImage>( );
+//  if ( vm.count("color") == 0 ) process<GreyLevelImage>( vm );
+//  else                          process<ColorImage>( vm );
 
 
 
-  trace.beginBlock("Reading image");
-  Image image;
-  readImage( dim , f1 , image );
-  Image end_image = image;
-  Image image_snr = image;
-  if ( snr )
-    readImage( dim , f_snr , image_snr );
-  trace.endBlock();
+
+
+//  typedef ImageContainerBySTLVector<Domain, double>             ImageDouble;
+//  typedef ImageContainerBySTLVector<Domain,
+//                    SimpleMatrix<double,2,2> >                  ImageSimpleMatrix2d;
+//  typedef ImageContainerBySTLVector<Domain, RealVector>         ImageVector;
+
+//  typedef std::vector< unsigned char >::iterator 			ImageIterator;
+//  typedef std::vector< double >::iterator 					ImageDoubleIterator;
+//  typedef std::vector< SimpleMatrix<double,2,2> >::iterator ImageSimpleMatrix2dIterator;
+//  typedef std::vector< RealVector >::iterator 				ImageVectorIterator;
+
+
+
+//  trace.beginBlock("Reading image");
+//  Image image;
+//  readImage( dim , f1 , image );
+//  Image end_image = image;
+//  Image image_snr = image;
+//  if ( snr )
+//    readImage( dim , f_snr , image_snr );
+//  trace.endBlock();
 
 //  // opening file
 //  const string file = f2 + ".txt";
